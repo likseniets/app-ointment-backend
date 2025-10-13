@@ -1,8 +1,17 @@
+using Microsoft.EntityFrameworkCore;
+using app_ointment_backend.Models;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Add DbContext
+builder.Services.AddDbContext<UserDbContext>(options => {
+    options.UseSqlite(
+        builder.Configuration.GetConnectionString("UserDbContextConnection"));
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

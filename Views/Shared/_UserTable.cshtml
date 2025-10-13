@@ -1,0 +1,26 @@
+@model IEnumerable<User>
+
+<div class="container">
+    <table class='table table-striped'>
+        <tr><th>Id</th><th>Name</th><th>Role</th></tr>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.UserId</td>
+                <td>
+                    <a asp-controller="User"
+                        asp-action="Details"
+                        asp-route-id="@user.UserId">@user.Name</a>
+                </td>
+                <td>@user.Role</td>
+                <td></td>
+            </tr>
+        }
+    
+    </table>
+    <p>
+        <a class="btn btn-secondary"
+            asp-controller="User"
+            asp-action="Create">Create new user</a>
+    </p>
+</div>
