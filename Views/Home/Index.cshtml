@@ -1,8 +1,119 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Dashboard";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="text-center mb-4">
+    <h1 class="display-4">Welcome to App-ointment</h1>
+    <p class="lead">Homecare Appointment Management System</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-people"></i> Total Users</h5>
+                <p class="card-text display-4">@ViewBag.TotalUsers</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-calendar-check"></i> Total Appointments</h5>
+                <p class="card-text display-4">@ViewBag.TotalAppointments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-calendar-event"></i> Upcoming</h5>
+                <p class="card-text display-4">@ViewBag.UpcomingCount</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="bi bi-calendar-week"></i> Upcoming Appointments</h4>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.UpcomingAppointments != null && ViewBag.UpcomingAppointments.Count > 0)
+                {
+                    <div class="list-group">
+                        @foreach (var appointment in ViewBag.UpcomingAppointments)
+                        {
+                            <a href="@Url.Action("Details", "Appointments", new { id = appointment.Id })" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">
+                                        <i class="bi bi-person-circle"></i> @appointment.ElderlyUser.Name
+                                    </h5>
+                                    <small>@appointment.AppointmentDate.ToString("dd MMM yyyy")</small>
+                                </div>
+                                <p class="mb-1">
+                                    <strong>Healthcare Personnel:</strong> @appointment.HealthcarePersonnel.Name<br />
+                                    <strong>Time:</strong> @appointment.StartTime.ToString(@"hh\:mm") - @appointment.EndTime.ToString(@"hh\:mm")<br />
+                                    <strong>Tasks:</strong> @appointment.Tasks.Count
+                                </p>
+                                <small class="text-muted">@appointment.Status</small>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No upcoming appointments scheduled.</p>
+                }
+                <div class="mt-3">
+                    <a href="@Url.Action("Index", "Appointments")" class="btn btn-primary">
+                        <i class="bi bi-calendar-check"></i> View All Appointments
+                    </a>
+                    <a href="@Url.Action("Create", "Appointments")" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Create New Appointment
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="bi bi-info-circle"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="@Url.Action("Create", "AvailableDays")" class="btn btn-outline-primary">
+                        <i class="bi bi-calendar-plus"></i> Add Available Day
+                    </a>
+                    <a href="@Url.Action("Create", "Users")" class="btn btn-outline-primary">
+                        <i class="bi bi-person-plus"></i> Add New User
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5><i class="bi bi-list-check"></i> About</h5>
+            </div>
+            <div class="card-body">
+                <p>This system helps manage homecare appointments for elderly users and healthcare personnel.</p>
+                <p>Features include:</p>
+                <ul>
+                    <li>Schedule appointments with specific tasks</li>
+                    <li>Manage healthcare personnel availability</li>
+                    <li>Track medication reminders and daily assistance</li>
+                    <li>Organize shopping and household chores</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>

@@ -19,4 +19,149 @@ html {
 
 body {
   margin-bottom: 60px;
+  background-color: #f8f9fa;
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px;
+}
+
+/* Custom styles for App-ointment */
+.navbar-brand {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.card {
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.card-header {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  font-weight: bold;
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.list-group-item {
+  border-left: 4px solid transparent;
+}
+
+.list-group-item:hover {
+  border-left-color: #0d6efd;
+  background-color: #f8f9fa;
+}
+
+.btn {
+  border-radius: 5px;
+}
+
+.badge {
+  padding: 0.5em 0.75em;
+  font-weight: 500;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.display-4 {
+  font-weight: 300;
+  color: #0d6efd;
+}
+
+.lead {
+  color: #6c757d;
+}
+
+/* Task completion styling */
+.list-group-item-success {
+  background-color: #d1e7dd;
+  border-color: #badbcc;
+}
+
+.list-group-item-success h5 {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Responsive tables */
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Enhanced card styling */
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Icon spacing */
+.bi {
+  margin-right: 0.25rem;
+}
+
+/* Alert styling */
+.alert {
+  border-radius: 10px;
+  border-left-width: 4px;
+}
+
+/* Form enhancements */
+.form-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-control, .form-select {
+  border-radius: 5px;
+}
+
+/* Navbar enhancements */
+.navbar {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-link {
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  transform: translateY(-2px);
+}
+
+/* Button hover effects */
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Dashboard stats cards */
+.card.text-white {
+  border: none;
+}
+
+.card.text-white .display-4 {
+  color: white;
+  font-weight: bold;
 }

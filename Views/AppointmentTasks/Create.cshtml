@@ -1,0 +1,74 @@
+@model app_ointment_backend.Models.AppointmentTask
+
+@{
+    ViewData["Title"] = "Add Task";
+}
+
+<h1><i class="bi bi-plus-circle"></i> Add Task to Appointment</h1>
+
+@if (ViewBag.Appointment != null)
+{
+    <div class="alert alert-info">
+        <h5>Appointment Details:</h5>
+        <p>
+            <strong>Elderly User:</strong> @ViewBag.Appointment.ElderlyUser.Name<br />
+            <strong>Healthcare Personnel:</strong> @ViewBag.Appointment.HealthcarePersonnel.Name<br />
+            <strong>Date:</strong> @ViewBag.Appointment.AppointmentDate.ToString("dd MMM yyyy")<br />
+            <strong>Time:</strong> @ViewBag.Appointment.StartTime.ToString(@"hh\:mm") - @ViewBag.Appointment.EndTime.ToString(@"hh\:mm")
+        </p>
+    </div>
+}
+
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <input type="hidden" asp-for="AppointmentId" value="@ViewBag.AppointmentId" />
+                    
+                    <div class="mb-3">
+                        <label asp-for="TaskName" class="form-label">Task Name</label>
+                        <input asp-for="TaskName" class="form-control" />
+                        <span asp-validation-for="TaskName" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="TaskType" class="form-label">Task Type</label>
+                        <select asp-for="TaskType" class="form-select">
+                            <option value="0">Assistance with Daily Living</option>
+                            <option value="1">Medication Reminder</option>
+                            <option value="2">Shopping</option>
+                            <option value="3">Household Chores</option>
+                            <option value="4">Health Check</option>
+                            <option value="5">Companionship</option>
+                            <option value="6">Other</option>
+                        </select>
+                        <span asp-validation-for="TaskType" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Add Task
+                        </button>
+                        <a asp-controller="Appointments" asp-action="Details" asp-route-id="@ViewBag.AppointmentId" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

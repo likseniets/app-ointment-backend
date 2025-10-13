@@ -1,0 +1,66 @@
+@model IEnumerable<app_ointment_backend.Models.AvailableDay>
+
+@{
+    ViewData["Title"] = "Available Days";
+}
+
+<h1><i class="bi bi-calendar3"></i> Available Days</h1>
+
+<p>
+    <a asp-action="Create" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Add Available Day
+    </a>
+</p>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Healthcare Personnel</th>
+                        <th>Date</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr class="@(item.IsBooked ? "table-secondary" : "")">
+                            <td>
+                                <i class="bi bi-person-badge"></i> @item.HealthcarePersonnel.Name
+                            </td>
+                            <td>@item.Date.ToString("dd MMM yyyy")</td>
+                            <td>@item.StartTime.ToString(@"hh\:mm")</td>
+                            <td>@item.EndTime.ToString(@"hh\:mm")</td>
+                            <td>
+                                @if (item.IsBooked)
+                                {
+                                    <span class="badge bg-secondary">Booked</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Available</span>
+                                }
+                            </td>
+                            <td>@item.Notes</td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+

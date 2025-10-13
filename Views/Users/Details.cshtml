@@ -1,0 +1,130 @@
+@model app_ointment_backend.Models.User
+
+@{
+    ViewData["Title"] = "User Details";
+}
+
+<h1><i class="bi bi-person-circle"></i> User Details</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h4>User Information</h4>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Name</dt>
+                    <dd class="col-sm-9">@Model.Name</dd>
+                    
+                    <dt class="col-sm-3">Email</dt>
+                    <dd class="col-sm-9">
+                        <i class="bi bi-envelope"></i> @Model.Email
+                    </dd>
+                    
+                    <dt class="col-sm-3">Phone</dt>
+                    <dd class="col-sm-9">
+                        <i class="bi bi-telephone"></i> @Model.Phone
+                    </dd>
+                    
+                    <dt class="col-sm-3">Role</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Role == app_ointment_backend.Models.UserRole.HealthcarePersonnel)
+                        {
+                            <span class="badge bg-primary">Healthcare Personnel</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Elderly</span>
+                        }
+                    </dd>
+                    
+                    <dt class="col-sm-3">Created</dt>
+                    <dd class="col-sm-9">@Model.CreatedAt.ToString("dd MMM yyyy HH:mm")</dd>
+                </dl>
+            </div>
+        </div>
+
+        @if (Model.Role == app_ointment_backend.Models.UserRole.Elderly)
+        {
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h4>Appointments (@Model.Appointments.Count)</h4>
+                </div>
+                <div class="card-body">
+                    @if (Model.Appointments.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var appointment in Model.Appointments.OrderBy(a => a.AppointmentDate))
+                            {
+                                <a href="@Url.Action("Details", "Appointments", new { id = appointment.Id })" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>@appointment.AppointmentDate.ToString("dd MMM yyyy")</strong>
+                                        <span>@appointment.Status</span>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No appointments scheduled.</p>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Model.Role == app_ointment_backend.Models.UserRole.HealthcarePersonnel)
+        {
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white">
+                    <h4>Available Days (@Model.AvailableDays.Count)</h4>
+                </div>
+                <div class="card-body">
+                    @if (Model.AvailableDays.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var day in Model.AvailableDays.OrderBy(d => d.Date))
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>@day.Date.ToString("dd MMM yyyy")</strong>
+                                        <span>
+                                            @day.StartTime.ToString(@"hh\:mm") - @day.EndTime.ToString(@"hh\:mm")
+                                            @if (day.IsBooked)
+                                            {
+                                                <span class="badge bg-secondary">Booked</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">Available</span>
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No available days set.</p>
+                    }
+                </div>
+            </div>
+        }
+
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Delete
+            </a>
+        </div>
+    </div>
+</div>
+

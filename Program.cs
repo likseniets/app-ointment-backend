@@ -1,19 +1,32 @@
-using app_ointment_backend.Models;
 using Microsoft.EntityFrameworkCore;
+using app_ointment_backend.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<AppointmentDbContext>(options =>
-{
-    options.UseSqlite(
-        builder.Configuration["ConnectionStrings:AppointmentDbContextConnection"]
-    );
-});
+// Add DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
+
+// Seed database
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<ApplicationDbContext>();
+    
+    // Apply migrations
+    context.Database.Migrate();
+    
+    // Seed data if database is empty
+    if (!context.Users.Any())
+    {
+        SeedData.Initialize(context);
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -30,6 +43,8 @@ app.UseRouting();
 
 app.UseAuthorization();
 
-app.MapDefaultControllerRoute();
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
