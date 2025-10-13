@@ -12,10 +12,12 @@ public class UserController : Controller
     public IActionResult Table()
     {
         var users = new List<User>();
-        var user1 = new User();
-        user1.UserId = 1;
-        user1.Name = "Artur";
-        user1.Role = UserRole.Admin;
+        var user1 = new User
+        {
+         UserId = 1,
+         Name = "Artur",
+         Role = UserRole.Admin,
+        };
 
         var user2 = new User
         {
@@ -29,5 +31,28 @@ public class UserController : Controller
 
         ViewBag.CurrentViewName = "List of Users";
         return View(users);
+    }
+
+     public List<User> GetUsers()
+    {
+        var users = new List<User>();
+        
+        var user1 = new User
+        {
+            UserId = 1,
+            Name = "Artur",
+            Role = UserRole.Admin
+        };
+
+        var user2 = new User
+        {
+            UserId = 2,
+            Name = "Eskil", 
+            Role = UserRole.Caregiver
+        };
+
+        users.Add(user1);
+        users.Add(user2);
+        return users;
     }
 }

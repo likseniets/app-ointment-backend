@@ -1,7 +1,17 @@
+using app_ointment_backend.Models;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddDbContext<AppointmentDbContext>(options =>
+{
+    options.UseSqlite(
+        builder.Configuration["ConnectionStrings:AppointmentDbContextConnection"]
+    );
+});
 
 var app = builder.Build();
 

@@ -1,0 +1,29 @@
+@model List<app_ointment_backend.Models.Appointment>
+
+<div class="container">
+    <h2>Appointments</h2>
+    
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Appointment ID</th>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Caretaker</th>
+                <th>Client</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var appointment in Model)
+            {
+                <tr>
+                    <td>@appointment.AppointmentId</td>
+                    <td>@appointment.Date.ToString("MM/dd/yyyy HH:mm")</td>
+                    <td>@appointment.Location</td>
+                    <td>@appointment.Caretaker?.Name</td>
+                    <td>@appointment.Client?.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

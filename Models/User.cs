@@ -5,7 +5,7 @@ public enum UserRole {Caregiver = 1, Caretaker = 2, Admin = 3}
 public class User
 {
     public int UserId { get; set; }
-    public string Name { get; set; } = string.Empty;
+    public required string Name { get; set; }
     public UserRole Role { get; set; }
 
 }
