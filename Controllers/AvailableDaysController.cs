@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using app_ointment_backend.Data;
 using app_ointment_backend.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace app_ointment_backend.Controllers;
 
@@ -33,8 +35,17 @@ public class AvailableDaysController : Controller
     }
 
     // GET: AvailableDays/Create
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
+        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var currentUser = await _context.Users.FindAsync(userId);
+        
+        if (currentUser == null)
+        {
+            return RedirectToAction("Login", "Auth");
+        }
+
+        ViewBag.CurrentUser = currentUser;
         ViewBag.HealthcarePersonnel = _context.Users.Where(u => u.Role == UserRole.HealthcarePersonnel).ToList();
         return View();
     }
@@ -44,13 +55,20 @@ public class AvailableDaysController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([Bind("HealthcarePersonnelId,Date,StartTime,EndTime,Notes")] AvailableDay availableDay)
     {
+        // Remove validation errors for navigation properties
+        ModelState.Remove("HealthcarePersonnel");
+        
         if (ModelState.IsValid)
         {
             _context.Add(availableDay);
             await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Tilgjengelig dag opprettet!";
             return RedirectToAction(nameof(Index));
         }
         
+        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var currentUser = await _context.Users.FindAsync(userId);
+        ViewBag.CurrentUser = currentUser;
         ViewBag.HealthcarePersonnel = _context.Users.Where(u => u.Role == UserRole.HealthcarePersonnel).ToList();
         return View(availableDay);
     }

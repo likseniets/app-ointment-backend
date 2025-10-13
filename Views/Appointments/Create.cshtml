@@ -1,12 +1,33 @@
 @model app_ointment_backend.Models.Appointment
 
 @{
-    ViewData["Title"] = "Create Appointment";
+    ViewData["Title"] = "Opprett Avtale";
+    var currentUser = ViewBag.CurrentUser as app_ointment_backend.Models.User;
 }
 
-<h1><i class="bi bi-plus-circle"></i> Create New Appointment</h1>
+<h1><i class="bi bi-plus-circle"></i> Opprett Ny Avtale</h1>
 
 <hr />
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle"></i> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#availableTimesModal">
+            <i class="bi bi-calendar-week"></i> Se tilgjengelige tider
+        </button>
+    </div>
+}
+
 <div class="row">
     <div class="col-md-8">
         <div class="card">
@@ -14,65 +35,206 @@
                 <form asp-action="Create">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                     
-                    <div class="mb-3">
-                        <label asp-for="ElderlyUserId" class="form-label">Elderly User</label>
-                        <select asp-for="ElderlyUserId" class="form-select">
-                            <option value="">-- Select Elderly User --</option>
-                            @foreach (var user in ViewBag.ElderlyUsers)
-                            {
-                                <option value="@user.Id">@user.Name (@user.Phone)</option>
-                            }
-                        </select>
-                        <span asp-validation-for="ElderlyUserId" class="text-danger"></span>
-                    </div>
+                    @if (currentUser.Role == app_ointment_backend.Models.UserRole.Elderly)
+                    {
+                        <!-- Elderly user - auto-fill their ID, let them choose healthcare personnel -->
+                        <input type="hidden" asp-for="ElderlyUserId" value="@currentUser.Id" />
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-person"></i> Pasient (Deg)</label>
+                            <input type="text" class="form-control" value="@currentUser.Name" disabled />
+                            <small class="text-muted">Du booker en avtale for deg selv</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="HealthcarePersonnelId" class="form-label">
+                                <i class="bi bi-person-badge"></i> Velg Helsepersonell
+                            </label>
+                            <select asp-for="HealthcarePersonnelId" class="form-select" required>
+                                <option value="">-- Velg helsepersonell --</option>
+                                @foreach (var user in ViewBag.HealthcarePersonnel)
+                                {
+                                    <option value="@user.Id">@user.Name (@user.Phone)</option>
+                                }
+                            </select>
+                            <span asp-validation-for="HealthcarePersonnelId" class="text-danger"></span>
+                        </div>
+                    }
+                    else if (currentUser.Role == app_ointment_backend.Models.UserRole.HealthcarePersonnel)
+                    {
+                        <!-- Healthcare personnel - auto-fill their ID, let them choose elderly user -->
+                        <input type="hidden" asp-for="HealthcarePersonnelId" value="@currentUser.Id" />
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-person-badge"></i> Helsepersonell (Deg)</label>
+                            <input type="text" class="form-control" value="@currentUser.Name" disabled />
+                            <small class="text-muted">Du booker en avtale for deg selv</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="ElderlyUserId" class="form-label">
+                                <i class="bi bi-person"></i> Velg Pasient
+                            </label>
+                            <select asp-for="ElderlyUserId" class="form-select" required>
+                                <option value="">-- Velg pasient --</option>
+                                @foreach (var user in ViewBag.ElderlyUsers)
+                                {
+                                    <option value="@user.Id">@user.Name (@user.Phone)</option>
+                                }
+                            </select>
+                            <span asp-validation-for="ElderlyUserId" class="text-danger"></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Admin or other roles - can choose both -->
+                        <div class="mb-3">
+                            <label asp-for="ElderlyUserId" class="form-label">
+                                <i class="bi bi-person"></i> Pasient
+                            </label>
+                            <select asp-for="ElderlyUserId" class="form-select">
+                                <option value="">-- Velg pasient --</option>
+                                @foreach (var user in ViewBag.ElderlyUsers)
+                                {
+                                    <option value="@user.Id">@user.Name (@user.Phone)</option>
+                                }
+                            </select>
+                            <span asp-validation-for="ElderlyUserId" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="HealthcarePersonnelId" class="form-label">
+                                <i class="bi bi-person-badge"></i> Helsepersonell
+                            </label>
+                            <select asp-for="HealthcarePersonnelId" class="form-select">
+                                <option value="">-- Velg helsepersonell --</option>
+                                @foreach (var user in ViewBag.HealthcarePersonnel)
+                                {
+                                    <option value="@user.Id">@user.Name (@user.Phone)</option>
+                                }
+                            </select>
+                            <span asp-validation-for="HealthcarePersonnelId" class="text-danger"></span>
+                        </div>
+                    }
                     
                     <div class="mb-3">
-                        <label asp-for="HealthcarePersonnelId" class="form-label">Healthcare Personnel</label>
-                        <select asp-for="HealthcarePersonnelId" class="form-select">
-                            <option value="">-- Select Healthcare Personnel --</option>
-                            @foreach (var user in ViewBag.HealthcarePersonnel)
-                            {
-                                <option value="@user.Id">@user.Name (@user.Phone)</option>
-                            }
-                        </select>
-                        <span asp-validation-for="HealthcarePersonnelId" class="text-danger"></span>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label asp-for="AppointmentDate" class="form-label">Appointment Date</label>
-                        <input asp-for="AppointmentDate" type="date" class="form-control" />
+                        <label asp-for="AppointmentDate" class="form-label">
+                            <i class="bi bi-calendar"></i> Dato
+                        </label>
+                        <input asp-for="AppointmentDate" type="date" class="form-control" required />
                         <span asp-validation-for="AppointmentDate" class="text-danger"></span>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label asp-for="StartTime" class="form-label">Start Time</label>
-                            <input asp-for="StartTime" type="time" class="form-control" />
+                            <label asp-for="StartTime" class="form-label">
+                                <i class="bi bi-clock"></i> Starttid
+                            </label>
+                            <input asp-for="StartTime" type="time" class="form-control" required />
                             <span asp-validation-for="StartTime" class="text-danger"></span>
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label asp-for="EndTime" class="form-label">End Time</label>
-                            <input asp-for="EndTime" type="time" class="form-control" />
+                            <label asp-for="EndTime" class="form-label">
+                                <i class="bi bi-clock-fill"></i> Sluttid
+                            </label>
+                            <input asp-for="EndTime" type="time" class="form-control" required />
                             <span asp-validation-for="EndTime" class="text-danger"></span>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label asp-for="Notes" class="form-label">Notes</label>
-                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                        <label asp-for="Notes" class="form-label">
+                            <i class="bi bi-card-text"></i> Notater
+                        </label>
+                        <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Eventuelle notater eller spesielle behov..."></textarea>
                         <span asp-validation-for="Notes" class="text-danger"></span>
                     </div>
                     
                     <div class="mb-3">
                         <button type="submit" class="btn btn-success">
-                            <i class="bi bi-check-circle"></i> Create
+                            <i class="bi bi-check-circle"></i> Opprett Avtale
                         </button>
                         <a asp-action="Index" class="btn btn-secondary">
-                            <i class="bi bi-x-circle"></i> Cancel
+                            <i class="bi bi-x-circle"></i> Avbryt
                         </a>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="bi bi-info-circle"></i> Viktig informasjon</h5>
+            </div>
+            <div class="card-body">
+                <p><i class="bi bi-check-circle text-success"></i> Systemet vil automatisk sjekke om helsepersonellet er tilgjengelig</p>
+                <p><i class="bi bi-check-circle text-success"></i> Du vil få se tilgjengelige tider hvis personen er opptatt</p>
+                <p><i class="bi bi-check-circle text-success"></i> Avtalen blir automatisk bekreftet ved opprettelse</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for available times -->
+<div class="modal fade" id="availableTimesModal" tabindex="-1" aria-labelledby="availableTimesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="availableTimesModalLabel">
+                    <i class="bi bi-calendar-week"></i> Tilgjengelige Tider
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (TempData["AvailableDays"] != null)
+                {
+                    var availableDaysJson = TempData["AvailableDays"]?.ToString();
+                    var availableDays = System.Text.Json.JsonSerializer.Deserialize<List<System.Text.Json.JsonElement>>(availableDaysJson ?? "[]");
+                    
+                    if (availableDays != null && availableDays.Count > 0)
+                    {
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th><i class="bi bi-calendar"></i> Dato</th>
+                                    <th><i class="bi bi-clock"></i> Starttid</th>
+                                    <th><i class="bi bi-clock-fill"></i> Sluttid</th>
+                                    <th><i class="bi bi-card-text"></i> Notater</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var day in availableDays)
+                                {
+                                    <tr class="available-time-row" 
+                                        data-date="@day.GetProperty("Date").GetString()" 
+                                        data-start-time="@day.GetProperty("StartTime").GetString()" 
+                                        data-end-time="@day.GetProperty("EndTime").GetString()"
+                                        style="cursor: pointer;">
+                                        <td>@day.GetProperty("Date").GetString()</td>
+                                        <td>@day.GetProperty("StartTime").GetString()</td>
+                                        <td>@day.GetProperty("EndTime").GetString()</td>
+                                        <td>@(day.GetProperty("Notes").GetString() ?? "-")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <p class="text-muted mt-2"><i class="bi bi-info-circle"></i> Klikk på en rad for å velge den tiden.</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Ingen tilgjengelige tider funnet.</p>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted">Ingen tilgjengelige tider funnet.</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Lukk</button>
             </div>
         </div>
     </div>
@@ -80,5 +242,109 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <style>
+        .available-time-row:hover {
+            background-color: #f8f9fa !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .available-time-row {
+            transition: all 0.2s ease;
+        }
+        
+        .table-hover tbody tr.available-time-row:hover {
+            background-color: #e3f2fd !important;
+        }
+    </style>
+    
+    <script>
+        // Function to handle time selection
+        function selectAvailableTime(date, startTime, endTime) {
+            console.log('Selecting time:', date, startTime, endTime);
+            
+            // Fill the form fields
+            const dateField = document.getElementById('AppointmentDate');
+            const startTimeField = document.getElementById('StartTime');
+            const endTimeField = document.getElementById('EndTime');
+            
+            if (dateField) dateField.value = date;
+            if (startTimeField) startTimeField.value = startTime;
+            if (endTimeField) endTimeField.value = endTime;
+            
+            // Close the modal
+            const modalElement = document.getElementById('availableTimesModal');
+            if (modalElement) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+            }
+            
+            // Show success message
+            const successAlert = document.createElement('div');
+            successAlert.className = 'alert alert-success alert-dismissible fade show mt-3';
+            successAlert.innerHTML = `
+                <i class="bi bi-check-circle"></i> Tid valgt! Dato og tid er nå fylt ut i skjemaet.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insert after the form
+            const form = document.querySelector('form');
+            if (form && form.parentNode) {
+                form.parentNode.insertBefore(successAlert, form.nextSibling);
+            }
+            
+            // Auto-remove after 5 seconds
+            setTimeout(function() {
+                if (successAlert.parentNode) {
+                    successAlert.remove();
+                }
+            }, 5000);
+        }
+        
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up click handlers');
+            
+            // Auto-open modal if there are available days to show
+            @if (TempData["AvailableDays"] != null)
+            {
+                <text>
+                setTimeout(function() {
+                    const modalElement = document.getElementById('availableTimesModal');
+                    if (modalElement) {
+                        const myModal = new bootstrap.Modal(modalElement);
+                        myModal.show();
+                    }
+                }, 100);
+                </text>
+            }
+            
+            // Add click handlers to available time rows
+            const rows = document.querySelectorAll('.available-time-row');
+            console.log('Found', rows.length, 'available time rows');
+            
+            rows.forEach(function(row, index) {
+                console.log('Setting up click handler for row', index);
+                row.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const date = this.getAttribute('data-date');
+                    const startTime = this.getAttribute('data-start-time');
+                    const endTime = this.getAttribute('data-end-time');
+                    
+                    console.log('Row clicked:', date, startTime, endTime);
+                    selectAvailableTime(date, startTime, endTime);
+                });
+                
+                // Add visual feedback
+                row.style.cursor = 'pointer';
+                row.title = 'Klikk for å velge denne tiden';
+            });
+        });
+    </script>
 }
-

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using app_ointment_backend.Data;
 using app_ointment_backend.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace app_ointment_backend.Controllers;
 
@@ -56,8 +58,17 @@ public class AppointmentsController : Controller
     }
 
     // GET: Appointments/Create
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
+        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var currentUser = await _context.Users.FindAsync(userId);
+        
+        if (currentUser == null)
+        {
+            return RedirectToAction("Login", "Auth");
+        }
+
+        ViewBag.CurrentUser = currentUser;
         ViewBag.ElderlyUsers = _context.Users.Where(u => u.Role == UserRole.Elderly).ToList();
         ViewBag.HealthcarePersonnel = _context.Users.Where(u => u.Role == UserRole.HealthcarePersonnel).ToList();
         return View();
@@ -68,15 +79,74 @@ public class AppointmentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([Bind("ElderlyUserId,HealthcarePersonnelId,AppointmentDate,StartTime,EndTime,Notes")] Appointment appointment)
     {
+        // Remove validation errors for navigation properties
+        ModelState.Remove("ElderlyUser");
+        ModelState.Remove("HealthcarePersonnel");
+        ModelState.Remove("Tasks");
+        
         if (ModelState.IsValid)
         {
+            // Check if healthcare personnel is available at the requested time
+            var appointmentDate = appointment.AppointmentDate.Date;
+            
+            // Get all available days for this healthcare personnel (SQLite limitation - can't translate TimeSpan comparisons)
+            var allAvailableDays = await _context.AvailableDays
+                .Where(ad => 
+                    ad.HealthcarePersonnelId == appointment.HealthcarePersonnelId &&
+                    !ad.IsBooked)
+                .ToListAsync();
+            
+            // Filter by date and time on client side (SQLite limitation)
+            var availableDay = allAvailableDays
+                .Where(ad => 
+                    ad.Date.Date == appointmentDate &&
+                    ad.StartTime <= appointment.StartTime &&
+                    ad.EndTime >= appointment.EndTime)
+                .FirstOrDefault();
+            
+            if (availableDay == null)
+            {
+                // Use the already fetched available days and filter for suggestions
+                var availableDaysList = allAvailableDays
+                    .Where(ad => ad.Date >= DateTime.Today)
+                    .OrderBy(ad => ad.Date)
+                    .ThenBy(ad => ad.StartTime)
+                    .Take(10)
+                    .ToList();
+                
+                var healthcarePersonnel = await _context.Users.FindAsync(appointment.HealthcarePersonnelId);
+                
+                TempData["ErrorMessage"] = $"{healthcarePersonnel?.Name} er ikke tilgjengelig på valgt tidspunkt.";
+                TempData["AvailableDays"] = System.Text.Json.JsonSerializer.Serialize(availableDaysList.Select(ad => new {
+                    Date = ad.Date.ToString("yyyy-MM-dd"),
+                    StartTime = ad.StartTime.ToString(@"hh\:mm"),
+                    EndTime = ad.EndTime.ToString(@"hh\:mm"),
+                    Notes = ad.Notes
+                }).ToList());
+                
+                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var currentUser = await _context.Users.FindAsync(userId);
+                ViewBag.CurrentUser = currentUser;
+                ViewBag.ElderlyUsers = _context.Users.Where(u => u.Role == UserRole.Elderly).ToList();
+                ViewBag.HealthcarePersonnel = _context.Users.Where(u => u.Role == UserRole.HealthcarePersonnel).ToList();
+                return View(appointment);
+            }
+            
+            // Mark the available day as booked
+            availableDay.IsBooked = true;
+            
             appointment.Status = AppointmentStatus.Scheduled;
             appointment.CreatedAt = DateTime.Now;
             _context.Add(appointment);
             await _context.SaveChangesAsync();
+            
+            TempData["SuccessMessage"] = "Avtale opprettet!";
             return RedirectToAction(nameof(Index));
         }
         
+        var currentUserId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var user = await _context.Users.FindAsync(currentUserId);
+        ViewBag.CurrentUser = user;
         ViewBag.ElderlyUsers = _context.Users.Where(u => u.Role == UserRole.Elderly).ToList();
         ViewBag.HealthcarePersonnel = _context.Users.Where(u => u.Role == UserRole.HealthcarePersonnel).ToList();
         return View(appointment);

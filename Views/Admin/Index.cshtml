@@ -1,0 +1,170 @@
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="text-center mb-4">
+    <h1 class="display-4"><i class="bi bi-shield-lock"></i> Admin Dashboard</h1>
+    <p class="lead">System administrasjon og oversikt</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-people"></i> Totale Brukere</h5>
+                <p class="card-text display-4">@ViewBag.TotalUsers</p>
+                <small>@ViewBag.TotalHealthcarePersonnel Helsepersonell, @ViewBag.TotalElderly Eldre</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-calendar-check"></i> Avtaler</h5>
+                <p class="card-text display-4">@ViewBag.TotalAppointments</p>
+                <small>@ViewBag.ScheduledAppointments Planlagt</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-calendar3"></i> Tilgjengelige Dager</h5>
+                <p class="card-text display-4">@ViewBag.TotalAvailableDays</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-list-check"></i> Oppgaver</h5>
+                <p class="card-text display-4">@ViewBag.TotalTasks</p>
+                <small>@ViewBag.CompletedAppointments Fullførte avtaler</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="bi bi-person-plus"></i> Nylig registrerte brukere</h4>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.RecentUsers != null && ((List<app_ointment_backend.Models.User>)ViewBag.RecentUsers).Count > 0)
+                {
+                    <div class="list-group">
+                        @foreach (var user in (List<app_ointment_backend.Models.User>)ViewBag.RecentUsers)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1">@user.Name</h5>
+                                        <p class="mb-1">
+                                            <small>@user.Email | @user.Phone</small><br />
+                                            <span class="badge bg-@(user.Role == app_ointment_backend.Models.UserRole.HealthcarePersonnel ? "primary" : user.Role == app_ointment_backend.Models.UserRole.Elderly ? "info" : "danger")">
+                                                @user.Role
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <small class="text-muted">@user.CreatedAt.ToString("dd MMM yyyy")</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">Ingen brukere ennå.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4><i class="bi bi-calendar-plus"></i> Nylig opprettede avtaler</h4>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.RecentAppointments != null && ((List<app_ointment_backend.Models.Appointment>)ViewBag.RecentAppointments).Count > 0)
+                {
+                    <div class="list-group">
+                        @foreach (var appointment in (List<app_ointment_backend.Models.Appointment>)ViewBag.RecentAppointments)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            @appointment.ElderlyUser.Name → @appointment.HealthcarePersonnel.Name
+                                        </h6>
+                                        <small>
+                                            @appointment.AppointmentDate.ToString("dd MMM yyyy") 
+                                            @appointment.StartTime.ToString(@"hh\:mm") - @appointment.EndTime.ToString(@"hh\:mm")
+                                        </small>
+                                    </div>
+                                    <small class="text-muted">@appointment.CreatedAt.ToString("dd MMM")</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">Ingen avtaler ennå.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h4><i class="bi bi-gear"></i> Administrasjon</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <i class="bi bi-people display-4 text-primary"></i>
+                                <h5 class="card-title mt-3">Administrer Brukere</h5>
+                                <p class="card-text">Se og administrer alle brukere i systemet</p>
+                                <a href="@Url.Action("Users", "Admin")" class="btn btn-primary">
+                                    <i class="bi bi-arrow-right"></i> Gå til brukere
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <i class="bi bi-calendar-check display-4 text-success"></i>
+                                <h5 class="card-title mt-3">Administrer Avtaler</h5>
+                                <p class="card-text">Se og administrer alle avtaler</p>
+                                <a href="@Url.Action("Appointments", "Admin")" class="btn btn-success">
+                                    <i class="bi bi-arrow-right"></i> Gå til avtaler
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <i class="bi bi-calendar3 display-4 text-info"></i>
+                                <h5 class="card-title mt-3">Tilgjengelige Dager</h5>
+                                <p class="card-text">Se tilgjengelighet for helsepersonell</p>
+                                <a href="@Url.Action("AvailableDays", "Admin")" class="btn btn-info">
+                                    <i class="bi bi-arrow-right"></i> Gå til tilgjengelighet
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

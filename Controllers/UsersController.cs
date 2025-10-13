@@ -50,8 +50,12 @@ public class UsersController : Controller
     // POST: Users/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Name,Email,Phone,Role")] User user)
+    public async Task<IActionResult> Create([Bind("Name,Email,Phone,Password,Role")] User user)
     {
+        // Remove validation errors for navigation properties
+        ModelState.Remove("Appointments");
+        ModelState.Remove("AvailableDays");
+        
         if (ModelState.IsValid)
         {
             user.CreatedAt = DateTime.Now;

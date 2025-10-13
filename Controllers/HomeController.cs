@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using app_ointment_backend.Data;
 using app_ointment_backend.Models;
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace app_ointment_backend.Controllers;
 
@@ -17,30 +19,82 @@ public class HomeController : Controller
         _logger = logger;
     }
 
-    public async Task<IActionResult> Index()
+    public IActionResult Index()
     {
-        // Get today's and upcoming appointments
-        var upcomingAppointments = await _context.Appointments
-            .Include(a => a.ElderlyUser)
-            .Include(a => a.HealthcarePersonnel)
-            .Include(a => a.Tasks)
-            .Where(a => a.AppointmentDate >= DateTime.Today)
-            .OrderBy(a => a.AppointmentDate)
-            .Take(5)
-            .ToListAsync();
+        // Redirect to login if not authenticated
+        if (!User.Identity?.IsAuthenticated == true)
+        {
+            return RedirectToAction("Login", "Auth");
+        }
         
-        // Sort by time on client side since SQLite doesn't support TimeSpan ordering
-        upcomingAppointments = upcomingAppointments
-            .OrderBy(a => a.AppointmentDate)
-            .ThenBy(a => a.StartTime)
-            .ToList();
+        return RedirectToAction("Dashboard");
+    }
 
-        ViewBag.UpcomingAppointments = upcomingAppointments;
-        ViewBag.TotalUsers = await _context.Users.CountAsync();
-        ViewBag.TotalAppointments = await _context.Appointments.CountAsync();
-        ViewBag.UpcomingCount = upcomingAppointments.Count;
+    [Authorize]
+    public async Task<IActionResult> Dashboard()
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
         
-        return View();
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return RedirectToAction("Login", "Auth");
+        }
+
+        ViewBag.CurrentUser = user;
+
+        // Redirect admin users to admin dashboard
+        if (user.Role == UserRole.Admin)
+        {
+            return RedirectToAction("Index", "Admin");
+        }
+
+        if (user.Role == UserRole.Elderly)
+        {
+            // Elderly user dashboard
+            var myAppointments = await _context.Appointments
+                .Include(a => a.HealthcarePersonnel)
+                .Include(a => a.Tasks)
+                .Where(a => a.ElderlyUserId == userId && a.AppointmentDate >= DateTime.Today)
+                .OrderBy(a => a.AppointmentDate)
+                .Take(5)
+                .ToListAsync();
+            
+            myAppointments = myAppointments
+                .OrderBy(a => a.AppointmentDate)
+                .ThenBy(a => a.StartTime)
+                .ToList();
+
+            ViewBag.MyAppointments = myAppointments;
+            return View("ElderlyDashboard");
+        }
+        else
+        {
+            // Healthcare personnel dashboard
+            var myAppointments = await _context.Appointments
+                .Include(a => a.ElderlyUser)
+                .Include(a => a.Tasks)
+                .Where(a => a.HealthcarePersonnelId == userId && a.AppointmentDate >= DateTime.Today)
+                .OrderBy(a => a.AppointmentDate)
+                .Take(5)
+                .ToListAsync();
+            
+            myAppointments = myAppointments
+                .OrderBy(a => a.AppointmentDate)
+                .ThenBy(a => a.StartTime)
+                .ToList();
+
+            var myAvailableDays = await _context.AvailableDays
+                .Where(a => a.HealthcarePersonnelId == userId && a.Date >= DateTime.Today)
+                .OrderBy(a => a.Date)
+                .Take(5)
+                .ToListAsync();
+
+            ViewBag.MyAppointments = myAppointments;
+            ViewBag.MyAvailableDays = myAvailableDays;
+            return View("HealthcareDashboard");
+        }
     }
 
     public IActionResult Privacy()

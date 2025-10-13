@@ -6,6 +6,7 @@ public class User
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     
@@ -17,5 +18,6 @@ public class User
 public enum UserRole
 {
     HealthcarePersonnel,
-    Elderly
+    Elderly,
+    Admin
 }

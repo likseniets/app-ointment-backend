@@ -1,0 +1,72 @@
+@model IEnumerable<app_ointment_backend.Models.Appointment>
+
+@{
+    ViewData["Title"] = "Administrer Avtaler";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-calendar-check"></i> Administrer Avtaler</h1>
+    <a href="@Url.Action("Index", "Admin")" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Tilbake til dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h4>Alle Avtaler (@Model.Count())</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Eldre Bruker</th>
+                        <th>Helsepersonell</th>
+                        <th>Dato</th>
+                        <th>Tid</th>
+                        <th>Status</th>
+                        <th>Oppgaver</th>
+                        <th>Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var appointment in Model)
+                    {
+                        <tr>
+                            <td>@appointment.ElderlyUser.Name</td>
+                            <td>@appointment.HealthcarePersonnel.Name</td>
+                            <td>@appointment.AppointmentDate.ToString("dd MMM yyyy")</td>
+                            <td>@appointment.StartTime.ToString(@"hh\:mm") - @appointment.EndTime.ToString(@"hh\:mm")</td>
+                            <td>
+                                @switch (appointment.Status)
+                                {
+                                    case app_ointment_backend.Models.AppointmentStatus.Scheduled:
+                                        <span class="badge bg-primary">Planlagt</span>
+                                        break;
+                                    case app_ointment_backend.Models.AppointmentStatus.InProgress:
+                                        <span class="badge bg-warning">Pågår</span>
+                                        break;
+                                    case app_ointment_backend.Models.AppointmentStatus.Completed:
+                                        <span class="badge bg-success">Fullført</span>
+                                        break;
+                                    case app_ointment_backend.Models.AppointmentStatus.Cancelled:
+                                        <span class="badge bg-danger">Avlyst</span>
+                                        break;
+                                }
+                            </td>
+                            <td>@appointment.Tasks.Count oppgaver</td>
+                            <td>
+                                <a href="@Url.Action("Details", "Appointments", new { id = appointment.Id })" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i> Se
+                                </a>
+                                <a href="@Url.Action("Edit", "Appointments", new { id = appointment.Id })" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i> Rediger
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

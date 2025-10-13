@@ -6,6 +6,18 @@ public static class SeedData
 {
     public static void Initialize(ApplicationDbContext context)
     {
+        // Add admin user
+        var adminUser = new User
+        {
+            Name = "Admin",
+            Email = "admin@app-ointment.no",
+            Phone = "00000000",
+            Password = "admin",
+            Role = UserRole.Admin
+        };
+        context.Users.Add(adminUser);
+        context.SaveChanges();
+
         // Add healthcare personnel
         var healthcarePersonnel = new List<User>
         {
@@ -14,6 +26,7 @@ public static class SeedData
                 Name = "Anna Hansen",
                 Email = "anna.hansen@healthcare.no",
                 Phone = "98765432",
+                Password = "passord123",
                 Role = UserRole.HealthcarePersonnel
             },
             new User
@@ -21,6 +34,7 @@ public static class SeedData
                 Name = "Lars Olsen",
                 Email = "lars.olsen@healthcare.no",
                 Phone = "98765433",
+                Password = "passord123",
                 Role = UserRole.HealthcarePersonnel
             },
             new User
@@ -28,6 +42,7 @@ public static class SeedData
                 Name = "Maria Johansen",
                 Email = "maria.johansen@healthcare.no",
                 Phone = "98765434",
+                Password = "passord123",
                 Role = UserRole.HealthcarePersonnel
             }
         };
@@ -40,6 +55,7 @@ public static class SeedData
                 Name = "Olav Berg",
                 Email = "olav.berg@epost.no",
                 Phone = "12345678",
+                Password = "passord123",
                 Role = UserRole.Elderly
             },
             new User
@@ -47,6 +63,7 @@ public static class SeedData
                 Name = "Kari Nordmann",
                 Email = "kari.nordmann@epost.no",
                 Phone = "12345679",
+                Password = "passord123",
                 Role = UserRole.Elderly
             },
             new User
@@ -54,6 +71,7 @@ public static class SeedData
                 Name = "Per Svendsen",
                 Email = "per.svendsen@epost.no",
                 Phone = "12345680",
+                Password = "passord123",
                 Role = UserRole.Elderly
             }
         };

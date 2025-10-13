@@ -1,0 +1,183 @@
+@{
+    ViewData["Title"] = "Min Dashboard";
+    var currentUser = ViewBag.CurrentUser as app_ointment_backend.Models.User;
+    var myAppointments = ViewBag.MyAppointments as List<app_ointment_backend.Models.Appointment>;
+    var myAvailableDays = ViewBag.MyAvailableDays as List<app_ointment_backend.Models.AvailableDay>;
+}
+
+<div class="text-center mb-4">
+    <h1 class="display-4">Velkommen, @currentUser.Name!</h1>
+    <p class="lead">Helsepersonell dashboard</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-calendar-check"></i> Mine Avtaler</h5>
+                <p class="card-text display-4">@myAppointments.Count</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-person-circle"></i> Pasienter</h5>
+                <p class="card-text display-4">@myAppointments.Select(a => a.ElderlyUserId).Distinct().Count()</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-list-check"></i> Oppgaver</h5>
+                <p class="card-text display-4">@myAppointments.Sum(a => a.Tasks.Count)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title"><i class="bi bi-calendar3"></i> Tilgjengelige Dager</h5>
+                <p class="card-text display-4">@myAvailableDays.Count</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="bi bi-calendar-week"></i> Mine kommende avtaler</h4>
+            </div>
+            <div class="card-body">
+                @if (myAppointments != null && myAppointments.Count > 0)
+                {
+                    <div class="list-group">
+                        @foreach (var appointment in myAppointments)
+                        {
+                            <a href="@Url.Action("Details", "Appointments", new { id = appointment.Id })" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">
+                                        <i class="bi bi-person-circle"></i> @appointment.ElderlyUser.Name
+                                    </h5>
+                                    <small>@appointment.AppointmentDate.ToString("dd MMM yyyy")</small>
+                                </div>
+                                <p class="mb-1">
+                                    <strong>Tid:</strong> @appointment.StartTime.ToString(@"hh\:mm") - @appointment.EndTime.ToString(@"hh\:mm")<br />
+                                    <strong>Oppgaver:</strong> @appointment.Tasks.Count
+                                    @if (!string.IsNullOrEmpty(appointment.Notes))
+                                    {
+                                        <br /><strong>Notater:</strong> @appointment.Notes
+                                    }
+                                </p>
+                                <small class="text-muted">
+                                    @switch (appointment.Status)
+                                    {
+                                        case app_ointment_backend.Models.AppointmentStatus.Scheduled:
+                                            <span class="badge bg-primary">Planlagt</span>
+                                            break;
+                                        case app_ointment_backend.Models.AppointmentStatus.InProgress:
+                                            <span class="badge bg-warning">Pågår</span>
+                                            break;
+                                        case app_ointment_backend.Models.AppointmentStatus.Completed:
+                                            <span class="badge bg-success">Fullført</span>
+                                            break;
+                                        case app_ointment_backend.Models.AppointmentStatus.Cancelled:
+                                            <span class="badge bg-danger">Avlyst</span>
+                                            break;
+                                    }
+                                </small>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">Du har ingen kommende avtaler.</p>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h4><i class="bi bi-calendar3"></i> Mine tilgjengelige dager</h4>
+            </div>
+            <div class="card-body">
+                @if (myAvailableDays != null && myAvailableDays.Count > 0)
+                {
+                    <div class="list-group">
+                        @foreach (var day in myAvailableDays)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <strong>@day.Date.ToString("dd MMM")</strong>
+                                    <span>
+                                        @day.StartTime.ToString(@"hh\:mm") - @day.EndTime.ToString(@"hh\:mm")
+                                        @if (day.IsBooked)
+                                        {
+                                            <span class="badge bg-secondary">Opptatt</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Ledig</span>
+                                        }
+                                    </span>
+                                </div>
+                                @if (!string.IsNullOrEmpty(day.Notes))
+                                {
+                                    <small class="text-muted">@day.Notes</small>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">Du har ingen tilgjengelige dager registrert.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="bi bi-info-circle"></i> Hurtighandlinger</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="@Url.Action("Index", "Appointments")" class="btn btn-outline-primary">
+                        <i class="bi bi-calendar-check"></i> Se alle mine avtaler
+                    </a>
+                    <a href="@Url.Action("Create", "AvailableDays")" class="btn btn-outline-success">
+                        <i class="bi bi-calendar-plus"></i> Legg til tilgjengelig dag
+                    </a>
+                    <a href="@Url.Action("Index", "AvailableDays")" class="btn btn-outline-warning">
+                        <i class="bi bi-calendar3"></i> Administrer tilgjengelighet
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5><i class="bi bi-person-badge"></i> Min informasjon</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Navn:</strong> @currentUser.Name</p>
+                <p><strong>Email:</strong> @currentUser.Email</p>
+                <p><strong>Telefon:</strong> @currentUser.Phone</p>
+                <p><strong>Rolle:</strong> Helsepersonell</p>
+                <p><strong>Bruker siden:</strong> @currentUser.CreatedAt.ToString("dd MMM yyyy")</p>
+            </div>
+        </div>
+    </div>
+</div>

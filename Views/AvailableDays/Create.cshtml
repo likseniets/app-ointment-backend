@@ -1,66 +1,114 @@
 @model app_ointment_backend.Models.AvailableDay
 
 @{
-    ViewData["Title"] = "Add Available Day";
+    ViewData["Title"] = "Legg til Tilgjengelig Dag";
+    var currentUser = ViewBag.CurrentUser as app_ointment_backend.Models.User;
 }
 
-<h1><i class="bi bi-plus-circle"></i> Add Available Day</h1>
+<h1><i class="bi bi-plus-circle"></i> Legg til Tilgjengelig Dag</h1>
 
 <hr />
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-8">
         <div class="card">
             <div class="card-body">
                 <form asp-action="Create">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                     
-                    <div class="mb-3">
-                        <label asp-for="HealthcarePersonnelId" class="form-label">Healthcare Personnel</label>
-                        <select asp-for="HealthcarePersonnelId" class="form-select">
-                            <option value="">-- Select Healthcare Personnel --</option>
-                            @foreach (var user in ViewBag.HealthcarePersonnel)
-                            {
-                                <option value="@user.Id">@user.Name (@user.Phone)</option>
-                            }
-                        </select>
-                        <span asp-validation-for="HealthcarePersonnelId" class="text-danger"></span>
-                    </div>
+                    @if (currentUser.Role == app_ointment_backend.Models.UserRole.HealthcarePersonnel)
+                    {
+                        <!-- Healthcare personnel - auto-fill their ID -->
+                        <input type="hidden" asp-for="HealthcarePersonnelId" value="@currentUser.Id" />
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-person-badge"></i> Helsepersonell (Deg)</label>
+                            <input type="text" class="form-control" value="@currentUser.Name" disabled />
+                            <small class="text-muted">Du legger til tilgjengelighet for deg selv</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Admin or other roles - can choose healthcare personnel -->
+                        <div class="mb-3">
+                            <label asp-for="HealthcarePersonnelId" class="form-label">
+                                <i class="bi bi-person-badge"></i> Velg Helsepersonell
+                            </label>
+                            <select asp-for="HealthcarePersonnelId" class="form-select" required>
+                                <option value="">-- Velg helsepersonell --</option>
+                                @foreach (var user in ViewBag.HealthcarePersonnel)
+                                {
+                                    <option value="@user.Id">@user.Name (@user.Phone)</option>
+                                }
+                            </select>
+                            <span asp-validation-for="HealthcarePersonnelId" class="text-danger"></span>
+                        </div>
+                    }
                     
                     <div class="mb-3">
-                        <label asp-for="Date" class="form-label">Date</label>
-                        <input asp-for="Date" type="date" class="form-control" />
+                        <label asp-for="Date" class="form-label">
+                            <i class="bi bi-calendar"></i> Dato
+                        </label>
+                        <input asp-for="Date" type="date" class="form-control" required />
                         <span asp-validation-for="Date" class="text-danger"></span>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label asp-for="StartTime" class="form-label">Start Time</label>
-                            <input asp-for="StartTime" type="time" class="form-control" />
+                            <label asp-for="StartTime" class="form-label">
+                                <i class="bi bi-clock"></i> Starttid
+                            </label>
+                            <input asp-for="StartTime" type="time" class="form-control" required />
                             <span asp-validation-for="StartTime" class="text-danger"></span>
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label asp-for="EndTime" class="form-label">End Time</label>
-                            <input asp-for="EndTime" type="time" class="form-control" />
+                            <label asp-for="EndTime" class="form-label">
+                                <i class="bi bi-clock-fill"></i> Sluttid
+                            </label>
+                            <input asp-for="EndTime" type="time" class="form-control" required />
                             <span asp-validation-for="EndTime" class="text-danger"></span>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label asp-for="Notes" class="form-label">Notes</label>
-                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                        <label asp-for="Notes" class="form-label">
+                            <i class="bi bi-card-text"></i> Notater
+                        </label>
+                        <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Eventuelle notater om tilgjengeligheten..."></textarea>
                         <span asp-validation-for="Notes" class="text-danger"></span>
                     </div>
                     
                     <div class="mb-3">
                         <button type="submit" class="btn btn-success">
-                            <i class="bi bi-check-circle"></i> Create
+                            <i class="bi bi-check-circle"></i> Opprett Tilgjengelig Dag
                         </button>
                         <a asp-action="Index" class="btn btn-secondary">
-                            <i class="bi bi-x-circle"></i> Cancel
+                            <i class="bi bi-x-circle"></i> Avbryt
                         </a>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="bi bi-info-circle"></i> Viktig informasjon</h5>
+            </div>
+            <div class="card-body">
+                <p><i class="bi bi-check-circle text-success"></i> Legg til når du er tilgjengelig for avtaler</p>
+                <p><i class="bi bi-check-circle text-success"></i> Pasienter kan booke avtaler i disse tidsrommene</p>
+                <p><i class="bi bi-check-circle text-success"></i> Du kan legge til flere tidsrom på samme dag</p>
             </div>
         </div>
     </div>
@@ -69,4 +117,3 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }
-
