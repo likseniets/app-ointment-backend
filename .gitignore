@@ -1,2 +1,5 @@
-.obj/
-.bin/
+.DS_Store
+**/obj
+**/bin
+**/node_modules
+**/build
