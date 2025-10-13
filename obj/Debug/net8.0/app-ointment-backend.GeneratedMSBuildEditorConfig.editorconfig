@@ -44,12 +44,24 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxDcmVhdGUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/artur/OneDrive/Dokument/GitHub/App-ointment-backend/Views/User/Delete.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxEZWxldGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/artur/OneDrive/Dokument/GitHub/App-ointment-backend/Views/User/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxEZXRhaWxzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/artur/OneDrive/Dokument/GitHub/App-ointment-backend/Views/User/Grid.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxHcmlkLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/artur/OneDrive/Dokument/GitHub/App-ointment-backend/Views/User/Table.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxUYWJsZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/artur/OneDrive/Dokument/GitHub/App-ointment-backend/Views/User/Update.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxVcGRhdGUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/artur/OneDrive/Dokument/GitHub/App-ointment-backend/Views/_ViewImports.cshtml]

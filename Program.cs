@@ -8,10 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 // Add DbContext
-builder.Services.AddDbContext<UserDbContext>(options => {
+builder.Services.AddDbContext<UserDbContext>(options =>
+{
     options.UseSqlite(
         builder.Configuration.GetConnectionString("UserDbContextConnection"));
 });
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
