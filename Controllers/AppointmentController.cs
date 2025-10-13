@@ -17,7 +17,6 @@ public class AppointmentController : Controller
     }
     public IActionResult Table()
     {
-        _appointmentDbContext.Database.EnsureCreated();
         List<Appointment> appointment = _appointmentDbContext.Appointment.ToList();
         return View(appointment);
     }
@@ -32,5 +31,7 @@ public class AppointmentController : Controller
             Client = client,
             Caretaker = caretaker,
         };
+        _appointmentDbContext.Appointment.Add(newAppointment);
+        _appointmentDbContext.SaveChanges();
     }
 }
