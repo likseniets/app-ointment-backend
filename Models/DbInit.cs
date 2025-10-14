@@ -8,11 +8,8 @@ public static class DBInit
     {
         using var serviceScope = app.ApplicationServices.CreateScope();
         UserDbContext _userDbContext = serviceScope.ServiceProvider.GetRequiredService<UserDbContext>();
-        AppointmentDbContext _appointmentDbContext = serviceScope.ServiceProvider.GetRequiredService<AppointmentDbContext>();
         _userDbContext.Database.EnsureDeleted();
         _userDbContext.Database.EnsureCreated();
-        _appointmentDbContext.Database.EnsureDeleted();
-        _appointmentDbContext.Database.EnsureCreated();
 
         if (!_userDbContext.Users.Any())
         {
@@ -64,7 +61,7 @@ public static class DBInit
         //    context.SaveChanges();
         //}
 
-        if (!_appointmentDbContext.Appointment.Any())
+        if (!_userDbContext.Appointments.Any())
         {
             var appointments = new List<Appointment>
             {
@@ -92,8 +89,8 @@ public static class DBInit
                 },
                 Location = "Home"},
             };
-            _appointmentDbContext.AddRange(appointments);
-            _appointmentDbContext.SaveChanges();
+            _userDbContext.AddRange(appointments);
+            _userDbContext.SaveChanges();
         }
 
         /*        if (!context.OrderItems.Any())
