@@ -11,16 +11,16 @@ namespace app_ointment_backend.Controllers;
 
 public class AppointmentController : Controller
 {
-    private readonly AppointmentDbContext _appointmentDbContext;
+    private readonly UserDbContext _userDbContext;
 
-    public AppointmentController(AppointmentDbContext appointmentDbContext)
+    public AppointmentController(UserDbContext userDbContext)
     {
-        _appointmentDbContext = appointmentDbContext;
+        _userDbContext = userDbContext; 
     }
     public async Task<IActionResult> Table()
     {
-        List<Appointment> appointments = await _appointmentDbContext.Appointment.ToListAsync();
-        var appointmentsViewModel = new AppointmentsViewModel(appointments, "Table");
+        List<Appointment> appointment = await _userDbContext.Appointments.ToListAsync();
+        var appointmentsViewModel = new AppointmentsViewModel(appointment, "Table");
         return View(appointmentsViewModel);
     }
     
@@ -31,14 +31,61 @@ public class AppointmentController : Controller
     }
 
     [HttpPost]
-    public IActionResult Create(Appointment appointment)
+    public async Task<IActionResult> Create(Appointment appointment)
     {
         if (ModelState.IsValid)
         {
-            _appointmentDbContext.Appointment.Add(appointment);
-            _appointmentDbContext.SaveChanges();
+            _userDbContext.Appointments.Add(appointment);
+            await _userDbContext.SaveChangesAsync();
             return RedirectToAction(nameof(Table));
         }
         return View(appointment);
     }
-}
+
+    [HttpGet]
+    public async Task<IActionResult> Update(int id)
+    {
+        var appointment = await _userDbContext.Appointments.FindAsync(id);
+        if (appointment == null)
+        {
+            return NotFound();
+        }
+        return View(appointment);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Update(Appointment appointment)
+    {
+        if (ModelState.IsValid)
+        {
+            _userDbContext.Appointments.Update(appointment);
+            await _userDbContext.SaveChangesAsync();
+            return RedirectToAction(nameof(Table));
+        }
+        return View(appointment);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var appointment = await _userDbContext.Appointments.FindAsync(id);
+        if (appointment == null)
+        {
+            return NotFound();
+        }
+        return View(appointment);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        var appointment = await _userDbContext.Appointments.FindAsync(id);
+        if (appointment == null)
+        {
+            return NotFound();
+        }
+        _userDbContext.Appointments.Remove(appointment);
+        await _userDbContext.SaveChangesAsync();
+        return RedirectToAction(nameof(Table));
+    }
+}    
