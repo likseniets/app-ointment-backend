@@ -19,4 +19,9 @@ public class AppointmentDbContext : DbContext
     }
 
     public DbSet<Appointment> Appointment { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+	{
+		optionsBuilder.UseLazyLoadingProxies();
+	}
 }

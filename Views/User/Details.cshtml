@@ -1,0 +1,17 @@
+@model User
+
+<h3 class="my-5">
+    @Model.Name
+</h3>
+
+<div class="row gx-5">
+    <img alt="@Model.Name" src="@Model.ImageUrl" class="img-thumbnail img-fluid w-25" />
+    <div class="col-7">
+        <h5>@Model.Role</h5>
+        <h3 class="pull-right">@Model.Adress</h3>
+        <h3 class="pull-right">@Model.Phone</h3>
+        <h3 class="pull-right">@Model.Email</h3>
+        <p><a href="/Item/Table">Back to Table View</a></p>
+        <p><a href="/Item/Grid">Back to Grid View</a></p>
+    </div>
+</div>
