@@ -17,46 +17,25 @@ public class AppointmentController : Controller
     }
     public IActionResult Table()
     {
-        var user1 = new User
-        {
-            UserId = 1,
-            Name = "Artur",
-            Role = UserRole.Admin
-        };
-
-        var user2 = new User
-        {
-            UserId = 2,
-            Name = "Eskil",
-            Role = UserRole.Caregiver
-        };
-        
-        Appointment newAppointment = new Appointment
-        {
-            AppointmentId = 1,
-            Location = "location",
-            Date = DateTime.Now,
-            Client = user1,
-            Caretaker = user2,
-        };
-        _appointmentDbContext.Appointment.Add(newAppointment);
-        _appointmentDbContext.SaveChanges();
-        _appointmentDbContext.Database.EnsureCreated();
         List<Appointment> appointment = _appointmentDbContext.Appointment.ToList();
         return View(appointment);
     }
     
-    public void CreateAppointment(int id, string location, DateTime date, User client, User caretaker)
+    [HttpGet]
+    public IActionResult Create()
     {
-        Appointment newAppointment = new Appointment
+        return View();
+    }
+
+    [HttpPost]
+    public IActionResult Create(Appointment appointment)
+    {
+        if (ModelState.IsValid)
         {
-            AppointmentId = id,
-            Location = location,
-            Date = date,
-            Client = client,
-            Caretaker = caretaker,
-        };
-        _appointmentDbContext.Appointment.Add(newAppointment);
-        _appointmentDbContext.SaveChanges();
+            _appointmentDbContext.Appointment.Add(appointment);
+            _appointmentDbContext.SaveChanges();
+            return RedirectToAction(nameof(Table));
+        }
+        return View(appointment);
     }
 }

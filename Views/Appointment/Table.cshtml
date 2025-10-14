@@ -9,8 +9,8 @@
                 <th>Appointment ID</th>
                 <th>Date</th>
                 <th>Location</th>
-                <th>Caretaker</th>
-                <th>Client</th>
+                <th>CaregiverId</th>
+                <th>ClientId</th>
             </tr>
         </thead>
         <tbody>
@@ -20,10 +20,17 @@
                     <td>@appointment.AppointmentId</td>
                     <td>@appointment.Date.ToString("MM/dd/yyyy HH:mm")</td>
                     <td>@appointment.Location</td>
-                    <td>@appointment.Caretaker?.Name</td>
-                    <td>@appointment.Client?.Name</td>
+                    <td>@appointment.CaregiverId</td>
+                    <td>@appointment.ClientId</td>
                 </tr>
             }
         </tbody>
     </table>
+    <p>
+        <a class="btn btn-secondary"
+            asp-controller="Appointment"
+            asp-action="Create">
+        Create new Appointment
+        </a>
+    </p>
 </div>

@@ -1,0 +1,28 @@
+@model app_ointment_backend.Models.Appointment
+
+<h2>Create New Item</h2>
+
+<form asp-action="Create">
+    <div class="form-group">
+        <label asp-for="CaregiverId"></label><span class="text-danger">Caretaker</span>
+        <input asp-for="CaregiverId" class="form-control" />
+        <span asp-validation-for="CaregiverId" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label for="Date">Select a Date:</label>
+        <input asp-for="Date" type="date" />
+        <span asp-validation-for="Date" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="ClientId">Client</label>
+        <input asp-for="ClientId" class="form-control" />
+        <span asp-validation-for="ClientId" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="Location">Location</label>
+        <input asp-for="Location" class="form-control" />
+        <span asp-validation-for="Location" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-action="Table" class="btn btn-secondary">Back to Table View</a>
+</form>
