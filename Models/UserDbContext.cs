@@ -5,9 +5,20 @@ namespace app_ointment_backend.Models;
 public class UserDbContext : DbContext
 {
 	public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
-    {
-        Database.EnsureCreated();
+	{
+		//Database.EnsureCreated(); //Removed because migrations
 	}
 
 	public DbSet<User> Users { get; set; }
+	public DbSet<Client> Clients { get; set; }
+	public DbSet<Caregiver> Caregivers { get; set; }
+	public DbSet<Appointment> Appointments { get; set; }
+
+	protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+	{
+		optionsBuilder.UseLazyLoadingProxies();
+	}
 }
+
+// Should this be changed to eager loading (.Include/ThenInclude) instead? Can give predictable, minimal queries and avoid N+1 query spikes.
+// Will test and see if this is needed.

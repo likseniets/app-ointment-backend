@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("app-ointment-backend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b149c7e075f5b3ee0af942554d77fd5c8a3a3b5c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aa5e3d3e1031f409298cbf1b9ba46d89cc804171")]
 [assembly: System.Reflection.AssemblyProductAttribute("app-ointment-backend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("app-ointment-backend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
