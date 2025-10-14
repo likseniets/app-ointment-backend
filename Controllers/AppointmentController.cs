@@ -9,15 +9,15 @@ namespace app_ointment_backend.Controllers;
 
 public class AppointmentController : Controller
 {
-    private readonly AppointmentDbContext _appointmentDbContext;
+    private readonly UserDbContext _userDbContext;
 
-    public AppointmentController(AppointmentDbContext appointmentDbContext)
+    public AppointmentController(UserDbContext userDbContext)
     {
-        _appointmentDbContext = appointmentDbContext;
+        _userDbContext = userDbContext; 
     }
-    public IActionResult Table()
+    public async Task<IActionResult> Table()
     {
-        List<Appointment> appointment = _appointmentDbContext.Appointment.ToList();
+        List<Appointment> appointment = _userDbContext.Appointments.ToList();
         return View(appointment);
     }
     
@@ -28,12 +28,12 @@ public class AppointmentController : Controller
     }
 
     [HttpPost]
-    public IActionResult Create(Appointment appointment)
+    public async Task<IActionResult> Create(Appointment appointment)
     {
         if (ModelState.IsValid)
         {
-            _appointmentDbContext.Appointment.Add(appointment);
-            _appointmentDbContext.SaveChanges();
+            _userDbContext.Appointments.Add(appointment);
+            await _userDbContext.SaveChangesAsync();
             return RedirectToAction(nameof(Table));
         }
         return View(appointment);
