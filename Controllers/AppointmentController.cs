@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using app_ointment_backend.Models;
+using app_ointment_backend.ViewModels;
 
 namespace app_ointment_backend.Controllers;
 
@@ -15,10 +17,11 @@ public class AppointmentController : Controller
     {
         _appointmentDbContext = appointmentDbContext;
     }
-    public IActionResult Table()
+    public async Task<IActionResult> Table()
     {
-        List<Appointment> appointment = _appointmentDbContext.Appointment.ToList();
-        return View(appointment);
+        List<Appointment> appointments = await _appointmentDbContext.Appointment.ToListAsync();
+        var appointmentsViewModel = new AppointmentsViewModel(appointments, "Table");
+        return View(appointmentsViewModel);
     }
     
     [HttpGet]
