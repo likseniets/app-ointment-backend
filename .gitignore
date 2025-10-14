@@ -1,2 +1,10 @@
-.obj/
-.bin/
+.DS_Store
+**/obj/
+**/bin/
+**/node_modules/
+**/build/
+<<<<<<< HEAD
+*.db
+=======
+*.db
+>>>>>>> a62e51b80fd0027063b0c1e15e933adef08a200c
