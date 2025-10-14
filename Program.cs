@@ -1,5 +1,6 @@
-using app_ointment_backend.Models;
 using Microsoft.EntityFrameworkCore;
+using app_ointment_backend.Models;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,10 +10,14 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppointmentDbContext>(options =>
 {
     options.UseSqlite(
-        builder.Configuration["ConnectionStrings:AppointmentDbContextConnection"]
-    );
+        builder.Configuration.GetConnectionString("AppointmentDbContextConnection"));
 });
 
+// Add DbContext
+builder.Services.AddDbContext<UserDbContext>(options => {
+    options.UseSqlite(
+        builder.Configuration.GetConnectionString("UserDbContextConnection"));
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

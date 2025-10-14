@@ -34,8 +34,20 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/dev/Apppppppp/app-ointment-backend/Views/Shared/_UserTable.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9Vc2VyVGFibGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/dev/Apppppppp/app-ointment-backend/Views/Shared/_ValidationScriptsPartial.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/dev/Apppppppp/app-ointment-backend/Views/User/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxDcmVhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/dev/Apppppppp/app-ointment-backend/Views/User/Grid.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxHcmlkLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/dev/Apppppppp/app-ointment-backend/Views/User/Table.cshtml]

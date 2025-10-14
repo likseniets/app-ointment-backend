@@ -1,0 +1,24 @@
+@model UsersViewModel
+
+<h1>List of Users (@ViewBag.CurrentViewName View)</h1>
+<a href="/User/Table">Table View</a>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    @foreach (var user in Model.Users)
+    {
+        <div class="col">
+            <div>
+                <div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <h5 class="text-start">
+                            @user.Name
+                        </h5>
+                        <h5 class="text-nowrap">
+                            @user.Role
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

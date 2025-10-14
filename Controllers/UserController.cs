@@ -4,55 +4,40 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using app_ointment_backend.Models;
+using app_ointment_backend.ViewModels;
 
 namespace app_ointment_backend.Controllers;
 
 public class UserController : Controller
 {
+    private readonly UserDbContext _userDbContext;
+
+    public UserController(UserDbContext userDbContext)
+    {
+        _userDbContext = userDbContext; 
+    }
     public IActionResult Table()
     {
-        var users = new List<User>();
-        var user1 = new User
-        {
-         UserId = 1,
-         Name = "Artur",
-         Role = UserRole.Admin,
-        };
-
-        var user2 = new User
-        {
-            UserId = 2,
-            Name = "Eskil",
-            Role = UserRole.Caregiver
-        };
-
-        users.Add(user1);
-        users.Add(user2);
-
-        ViewBag.CurrentViewName = "List of Users";
-        return View(users);
+        List<User> users = _userDbContext.Users.ToList();
+        var usersViewModel = new UsersViewModel(users, "Table");
+        return View(usersViewModel);
     }
 
-     public List<User> GetUsers()
+     [HttpGet]
+    public IActionResult Create()
     {
-        var users = new List<User>();
-        
-        var user1 = new User
-        {
-            UserId = 1,
-            Name = "Artur",
-            Role = UserRole.Admin
-        };
-
-        var user2 = new User
-        {
-            UserId = 2,
-            Name = "Eskil", 
-            Role = UserRole.Caregiver
-        };
-
-        users.Add(user1);
-        users.Add(user2);
-        return users;
+        return View();
     }
+
+    [HttpPost]
+    public IActionResult Create(User user)
+    {
+        if (ModelState.IsValid)
+        {
+            _userDbContext.Users.Add(user);
+            _userDbContext.SaveChanges();
+            return RedirectToAction(nameof(Table));
+        }
+        return View(user);
+    }    
 }
