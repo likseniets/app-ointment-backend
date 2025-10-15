@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using app_ointment_backend.Models;
+using app_ointment_backend.DAL;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +13,8 @@ builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlite(
         builder.Configuration.GetConnectionString("UserDbContextConnection"));
 });
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 var app = builder.Build();
 

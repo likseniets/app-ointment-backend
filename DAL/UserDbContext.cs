@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using app_ointment_backend.Models;
 
-namespace app_ointment_backend.Models;
+namespace app_ointment_backend.DAL;
 
 public class UserDbContext : DbContext
 {
