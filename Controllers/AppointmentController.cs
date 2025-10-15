@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using app_ointment_backend.Models;
+using app_ointment_backend.DAL;
 
 namespace app_ointment_backend.Controllers;
 
@@ -17,7 +18,7 @@ public class AppointmentController : Controller
     }
     public async Task<IActionResult> Table()
     {
-        List<Appointment> appointment = _userDbContext.Appointments.ToList();
+        List<Appointment> appointment = await _userDbContext.Appointments.ToList();
         return View(appointment);
     }
     
