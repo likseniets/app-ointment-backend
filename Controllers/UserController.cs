@@ -1,36 +1,31 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using app_ointment_backend.Models;
 using app_ointment_backend.ViewModels;
+using app_ointment_backend.DAL;
 
 namespace app_ointment_backend.Controllers;
 
 public class UserController : Controller
 {
-    private readonly UserDbContext _userDbContext;
+    private readonly IUserRepository _userRepository;
 
-    public UserController(UserDbContext userDbContext)
+    public UserController(IUserRepository userRepository)
     {
-        _userDbContext = userDbContext; 
+        _userRepository = userRepository; 
     }
     public async Task<IActionResult> Table()
     {
-        List<User> users = await _userDbContext.Users.ToListAsync();
+        List<User> users = await _userRepository.GetAll();
         var usersViewModel = new UsersViewModel(users, "Table");
         return View(usersViewModel);
     }
 
-    public async Task<IActionResult> Details(int id)
+    public async Task<IActionResult> Details(int userId)
     {
-        List<User> users = await _userDbContext.Users.ToListAsync();
-        var user = users.FirstOrDefault(i => i.UserId == id);
-        if (user == null)
+        var users = await _userRepository.GetUserById(userId);
+        if (users == null)
             return NotFound();
-        return View(user);
+        return View(users);
     }
 
      [HttpGet]
@@ -45,16 +40,8 @@ public class UserController : Controller
     {
         if (ModelState.IsValid)
         {
-            try
-            {
-                _userDbContext.Users.Add(user);
-                await _userDbContext.SaveChangesAsync();
-                return RedirectToAction(nameof(Table));
-            }
-            catch (DbUpdateException)
-            {
-                ModelState.AddModelError(string.Empty, "Unable to save user. Try again.");
-            }
+            await _userRepository.CreateUser(user);
+            return RedirectToAction(nameof(Table));
         }
         return View(user);
     }
@@ -62,7 +49,7 @@ public class UserController : Controller
     [HttpGet]
     public async Task<IActionResult> Update(int id)
     {
-        var user = await _userDbContext.Users.FindAsync(id);
+        var user = await _userRepository.GetUserById(id);
         if (user == null)
         {
             return NotFound();
@@ -76,30 +63,8 @@ public class UserController : Controller
     {
         if (ModelState.IsValid)
         {
-            try
-            {
-                var existing = await _userDbContext.Users.FindAsync(user.UserId);
-                if (existing == null)
-                {
-                    return NotFound();
-                }
-                // Update selected fields to avoid unintended overwrites
-                existing.Name = user.Name;
-                existing.Role = user.Role;
-                existing.Phone = user.Phone;
-                existing.Email = user.Email;
-                existing.Adress = user.Adress;
-                await _userDbContext.SaveChangesAsync();
-                return RedirectToAction(nameof(Table));
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                ModelState.AddModelError(string.Empty, "The user was modified by another process. Reload and try again.");
-            }
-            catch (DbUpdateException)
-            {
-                ModelState.AddModelError(string.Empty, "Unable to save changes. Try again.");
-            }
+            await _userRepository.UpdateUser(user);
+            return RedirectToAction(nameof(Table));
         }
         return View(user);
     }
@@ -107,7 +72,7 @@ public class UserController : Controller
     [HttpGet]
     public async Task<IActionResult> Delete(int id)
     {
-        var user = await _userDbContext.Users.FindAsync(id);
+        var user = await _userRepository.GetUserById(id);
         if (user == null)
         {
             return NotFound();
@@ -119,13 +84,7 @@ public class UserController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        var user = await _userDbContext.Users.FindAsync(id);
-        if (user == null)
-        {
-            return NotFound();
-        }
-        _userDbContext.Users.Remove(user);
-        await _userDbContext.SaveChangesAsync();
+        await _userRepository.DeleteUser(id);
         return RedirectToAction(nameof(Table));
     }
 }    
