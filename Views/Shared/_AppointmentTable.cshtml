@@ -14,10 +14,10 @@
         {
             <tr>
                 <td>@appointment.AppointmentId</td>
-                <td>@appointment.Client.Name</td>
-                <td>@appointment.Caregiver.Name</td>
+                <td>@(appointment.Client?.Name ?? "-")</td>
+                <td>@(appointment.Caregiver?.Name ?? "-")</td>
                 <td>@appointment.Date</td>
-                <td>@appointment.Client.Adress</td>
+                <td>@appointment.Location</td>
                 <td>
                     <a asp-action="Update" asp-route-id="@appointment.AppointmentId">Update</a>
                     <a asp-action="Delete" asp-route-id="@appointment.AppointmentId">Delete</a>

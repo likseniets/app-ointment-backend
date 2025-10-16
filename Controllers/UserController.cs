@@ -40,13 +40,21 @@ public class UserController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(User user)
     {
         if (ModelState.IsValid)
         {
-            _userDbContext.Users.Add(user);
-            await _userDbContext.SaveChangesAsync();
-            return RedirectToAction(nameof(Table));
+            try
+            {
+                _userDbContext.Users.Add(user);
+                await _userDbContext.SaveChangesAsync();
+                return RedirectToAction(nameof(Table));
+            }
+            catch (DbUpdateException)
+            {
+                ModelState.AddModelError(string.Empty, "Unable to save user. Try again.");
+            }
         }
         return View(user);
     }
@@ -63,13 +71,35 @@ public class UserController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(User user)
     {
         if (ModelState.IsValid)
         {
-            _userDbContext.Users.Update(user);
-            await _userDbContext.SaveChangesAsync();
-            return RedirectToAction(nameof(Table));
+            try
+            {
+                var existing = await _userDbContext.Users.FindAsync(user.UserId);
+                if (existing == null)
+                {
+                    return NotFound();
+                }
+                // Update selected fields to avoid unintended overwrites
+                existing.Name = user.Name;
+                existing.Role = user.Role;
+                existing.Phone = user.Phone;
+                existing.Email = user.Email;
+                existing.Adress = user.Adress;
+                await _userDbContext.SaveChangesAsync();
+                return RedirectToAction(nameof(Table));
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ModelState.AddModelError(string.Empty, "The user was modified by another process. Reload and try again.");
+            }
+            catch (DbUpdateException)
+            {
+                ModelState.AddModelError(string.Empty, "Unable to save changes. Try again.");
+            }
         }
         return View(user);
     }
@@ -86,6 +116,7 @@ public class UserController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
         var user = await _userDbContext.Users.FindAsync(id);

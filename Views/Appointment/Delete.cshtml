@@ -15,6 +15,7 @@
     </dl>
 
     <form asp-action="DeleteConfirmed" asp-route-id="@Model.AppointmentId" method="post">
+        @Html.AntiForgeryToken()
         <button type="submit" class="btn btn-danger">Cancel appointment</button>
         <a asp-action="Table" class="btn btn-secondary">Go back</a>
     </form>
