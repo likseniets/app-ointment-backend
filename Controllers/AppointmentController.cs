@@ -79,7 +79,7 @@ public class AppointmentController : Controller
             }
         }
         
-        // Rebuild dropdowns for redisplay
+        // Rebuilds dropdowns for redisplay
         var caregivers = _userDbContext.Users  
             .Where(u => u.Role == UserRole.Caregiver)
             .Select(u => new { u.UserId, u.Name })
