@@ -12,7 +12,8 @@ public static class DBInit
         _userDbContext.Database.EnsureDeleted();
         _userDbContext.Database.EnsureCreated();
 
-        if (!_userDbContext.Users.Any())
+        // FIKSET: Endret fra Users til AppUsers
+        if (!_userDbContext.AppUsers.Any())
         {
             var users = new List<User>
             {

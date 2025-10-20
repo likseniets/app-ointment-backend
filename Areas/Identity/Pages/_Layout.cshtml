@@ -1,4 +1,8 @@
-﻿<!DOCTYPE html>
+@* 
+    FIKSET: Ny layout-fil opprettet for Identity-området
+    Denne filen sikrer korrekt håndtering av Scripts-seksjon for Identity-sider
+*@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -39,7 +43,7 @@
             @RenderBody()
         </main>
     </div>
-    @* FIKSET: Scripts-seksjon flyttet hit (utenfor main tag) for korrekt rendering av Identity-sider *@
+    @* FIKSET: Scripts-seksjon plassert utenfor main tag for korrekt rendering *@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

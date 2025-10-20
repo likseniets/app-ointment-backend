@@ -12,34 +12,35 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
+    // FIKSET: Alle referanser endret fra Users til AppUsers for å unngå konflikt med Identity
     public async Task<List<User>> GetAll()
     {
-        return await _context.Users.ToListAsync();
+        return await _context.AppUsers.ToListAsync();
     }
 
     public async Task<User?> GetUserById(int id)
     {
-        return await _context.Users.FindAsync(id);
+        return await _context.AppUsers.FindAsync(id);
     }
 
     public async Task CreateUser(User user)
     {
-        _context.Users.Add(user);
+        _context.AppUsers.Add(user);
         await _context.SaveChangesAsync();
     }
 
     public async Task UpdateUser(User user)
     {
-        _context.Users.Update(user);
+        _context.AppUsers.Update(user);
         await _context.SaveChangesAsync();
     }
 
     public async Task DeleteUser(int id)
     {
-        var user = await _context.Users.FindAsync(id);
+        var user = await _context.AppUsers.FindAsync(id);
         if (user != null)
         {
-            _context.Users.Remove(user);
+            _context.AppUsers.Remove(user);
             await _context.SaveChangesAsync();
         }
     }

@@ -1,16 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using app_ointment_backend.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace app_ointment_backend.DAL;
 
-public class UserDbContext : DbContext
+public class UserDbContext : IdentityDbContext
 {
 	public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
 	{
 		//Database.EnsureCreated(); //Removed because migrations
 	}
 
-	public DbSet<User> Users { get; set; }
+	// FIKSET: Endret fra 'Users' til 'AppUsers' for å unngå konflikt med Identity's innebygde Users property
+	public DbSet<User> AppUsers { get; set; }
 	public DbSet<Client> Clients { get; set; }
 	public DbSet<Caregiver> Caregivers { get; set; }
 	public DbSet<Appointment> Appointments { get; set; }
