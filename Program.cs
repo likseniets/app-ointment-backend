@@ -17,7 +17,9 @@ builder.Services.AddDbContext<UserDbContext>(options =>
         builder.Configuration.GetConnectionString("UserDbContextConnection"));
 });
 
+// Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 
 var loggerConfiguration = new LoggerConfiguration()
     .MinimumLevel.Information() // levels: Trace < Information < Warning < Error < Fatal

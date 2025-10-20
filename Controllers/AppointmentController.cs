@@ -14,19 +14,24 @@ namespace app_ointment_backend.Controllers;
 public class AppointmentController : Controller
 {
     private readonly UserDbContext _userDbContext;
+    private readonly IAppointmentRepository _appointmentRepository;
+    private readonly ILogger<AppointmentController> _logger;
 
-    public AppointmentController(UserDbContext userDbContext)
+    public AppointmentController(UserDbContext userDbContext, IAppointmentRepository appointmentRepository, ILogger<AppointmentController> logger)
     {
         _userDbContext = userDbContext; 
+        _appointmentRepository = appointmentRepository;
+        _logger = logger;
     }
     public async Task<IActionResult> Table()
     {
-        var appointment = await _userDbContext.Appointments
-            .Include(a => a.Client)
-            .Include(a => a.Caregiver)
-            .AsNoTracking()
-            .ToListAsync();
-        var appointmentsViewModel = new AppointmentsViewModel(appointment, "Table");
+        var appointments = await _appointmentRepository.GetAll();
+        if (appointments == null)
+        {
+            _logger.LogError("[AppointmentController] Appointment list not found while executing _appointmentRepository.GetAll()");
+            return NotFound("Appointment list not found");
+        }
+        var appointmentsViewModel = new AppointmentsViewModel(appointments, "Table");
         return View(appointmentsViewModel);
     }
     
@@ -68,9 +73,9 @@ public class AppointmentController : Controller
 
                 if (ModelState.IsValid)
                 {
-                    _userDbContext.Appointments.Add(appointment);
-                    await _userDbContext.SaveChangesAsync();
-                    return RedirectToAction(nameof(Table));
+                    bool returnOk = await _appointmentRepository.CreateAppointment(appointment);
+                    if (returnOk)
+                        return RedirectToAction(nameof(Table));
                 }
             }
             catch (DbUpdateException)
@@ -80,7 +85,7 @@ public class AppointmentController : Controller
         }
         
         // Rebuilds dropdowns for redisplay
-        var caregivers = _userDbContext.Users  
+        /* var caregivers = _userDbContext.Users  
             .Where(u => u.Role == UserRole.Caregiver)
             .Select(u => new { u.UserId, u.Name })
             .ToList();
@@ -89,17 +94,18 @@ public class AppointmentController : Controller
             .Where(u => u.Role == UserRole.Client)
             .Select(u => new { u.UserId, u.Name })
             .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name");
+        ViewBag.ClientList = new SelectList(clients, "UserId", "Name"); */
         return View(appointment);
     }
 
     [HttpGet]
     public async Task<IActionResult> Update(int id)
     {
-        var appointment = await _userDbContext.Appointments.FindAsync(id);
+        var appointment = await _appointmentRepository.GetAppointmentById(id);
         if (appointment == null)
         {
-            return NotFound();
+            _logger.LogError("[AppointmentController] appointment not found when updating the AppointmentId {AppointmentId:0000}", id);
+            return BadRequest("Appointment not found");
         }
         // Populate dropdowns for caregiver and client
         var caregivers = _userDbContext.Users
@@ -124,9 +130,10 @@ public class AppointmentController : Controller
         {
             try
             {
-                var existing = await _userDbContext.Appointments.FindAsync(appointment.AppointmentId);
+                var existing = await _appointmentRepository.GetAppointmentById(appointment.AppointmentId);
                 if (existing == null)
                 {
+                    _logger.LogError("[AppointmentController] appointment not found for AppointmentId");
                     return NotFound();
                 }
 
@@ -136,8 +143,9 @@ public class AppointmentController : Controller
                 existing.ClientId = appointment.ClientId; // kept from hidden field
                 existing.Location = appointment.Location;
 
-                await _userDbContext.SaveChangesAsync();
-                return RedirectToAction(nameof(Table));
+                bool returnOk = await _appointmentRepository.UpdateAppointment(appointment);
+                if (returnOk)
+                    return RedirectToAction(nameof(Table));
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -149,7 +157,7 @@ public class AppointmentController : Controller
             }
         }
 
-        // Rebuild dropdowns when redisplaying the form
+        // Rebuild dropdowns when redisplaying the form. Without this, the app does not return to the appointments table and does not save the update.
         var caregivers = _userDbContext.Users
             .Where(u => u.Role == UserRole.Caregiver)
             .Select(u => new { u.UserId, u.Name })
@@ -160,17 +168,18 @@ public class AppointmentController : Controller
             .Where(u => u.Role == UserRole.Client)
             .Select(u => new { u.UserId, u.Name })
             .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId);
+        ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId); 
         return View(appointment);
     }
 
     [HttpGet]
     public async Task<IActionResult> Delete(int id)
     {
-        var appointment = await _userDbContext.Appointments.FindAsync(id);
+        var appointment = await _appointmentRepository.GetAppointmentById(id);
         if (appointment == null)
         {
-            return NotFound();
+            _logger.LogError("[AppointmentController] appointment not found for Id {AppointmentId:0000}", id);
+            return BadRequest("Not found");
         }
         return View(appointment);
     }
@@ -179,13 +188,17 @@ public class AppointmentController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        var appointment = await _userDbContext.Appointments.FindAsync(id);
+        /* var appointment = await _appointmentRepository.GetAppointmentById(id);
         if (appointment == null)
         {
             return NotFound();
+        } */
+        bool returnOk = await _appointmentRepository.DeleteAppointment(id);
+        if (!returnOk)
+        {
+            _logger.LogError("[AppointmentController] Appointment deletion failed for the Id {AppointmentId:0000}", id);
+            return BadRequest("Appointment deletion failed");
         }
-        _userDbContext.Appointments.Remove(appointment);
-        await _userDbContext.SaveChangesAsync();
         return RedirectToAction(nameof(Table));
     }
 }    

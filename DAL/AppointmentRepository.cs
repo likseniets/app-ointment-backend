@@ -19,11 +19,15 @@ public class AppointmentRepository : IAppointmentRepository
     {
         try
         {
-            return await _context.Appointments.ToListAsync();
+            return await _context.Appointments
+                .Include(a => a.Client)
+                .Include(a => a.Caregiver)
+                .AsNoTracking()
+                .ToListAsync();
         }
         catch (Exception e)
         {
-            _logger.LogError("[AppointmentRepository] appointments ToListAsync() failed when GetAll(), error message: {e}", e.Message);
+            _logger.LogError("[AppointmentRepository] appointments query failed when GetAll(), error message: {e}", e.Message);
             return null;
         }
         
@@ -33,11 +37,15 @@ public class AppointmentRepository : IAppointmentRepository
     {
         try
         {
-            return await _context.Appointments.FindAsync(id);
+            return await _context.Appointments
+                .Include(a => a.Client)
+                .Include(a => a.Caregiver)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.AppointmentId == id);
         }
         catch (Exception e)
         {
-            _logger.LogError("[AppointmentRepository] Appointments FindAsync(id) failed when GetUserById() for AppointmentId {AppointmentId:0000}, error message: {e}", id, e.Message);
+            _logger.LogError("[AppointmentRepository] appointments query failed when GetAppointmentById() for AppointmentId {AppointmentId:0000}, error message: {e}", id, e.Message);
             return null;
         }
         
