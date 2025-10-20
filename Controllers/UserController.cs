@@ -8,24 +8,34 @@ namespace app_ointment_backend.Controllers;
 public class UserController : Controller
 {
     private readonly IUserRepository _userRepository;
+    private readonly ILogger<UserController> _logger;
 
-    public UserController(IUserRepository userRepository)
+    public UserController(IUserRepository userRepository, ILogger<UserController> logger)
     {
-        _userRepository = userRepository; 
+        _userRepository = userRepository;
+        _logger = logger;
     }
     public async Task<IActionResult> Table()
     {
-        List<User> users = await _userRepository.GetAll();
+        var users = await _userRepository.GetAll();
+        if(users == null)
+        {
+            _logger.LogError("[UserController] User list not found while executing _userRepository.GetAll()");
+            return NotFound("User list not found");
+        }
         var usersViewModel = new UsersViewModel(users, "Table");
         return View(usersViewModel);
     }
 
     public async Task<IActionResult> Details(int userId)
     {
-        var users = await _userRepository.GetUserById(userId);
-        if (users == null)
-            return NotFound();
-        return View(users);
+        var user = await _userRepository.GetUserById(userId);
+        if (user == null)
+        {
+            _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", userId);
+            return NotFound("User not found");
+        }
+        return View(user);
     }
 
      [HttpGet]
@@ -35,13 +45,16 @@ public class UserController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(User user)
     {
         if (ModelState.IsValid)
         {
-            await _userRepository.CreateUser(user);
-            return RedirectToAction(nameof(Table));
+            bool returnOk = await _userRepository.CreateUser(user);
+            if (returnOk)
+                return RedirectToAction(nameof(Table));
         }
+        _logger.LogWarning("[UserController] user creation failed {@user}", user);
         return View(user);
     }
 
@@ -51,19 +64,23 @@ public class UserController : Controller
         var user = await _userRepository.GetUserById(id);
         if (user == null)
         {
-            return NotFound();
+            _logger.LogError("[UserController] User not found when updating the UserId {UserId:0000}", id);
+            return BadRequest("User not found");
         }
         return View(user);
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(User user)
     {
         if (ModelState.IsValid)
         {
-            await _userRepository.UpdateUser(user);
-            return RedirectToAction(nameof(Table));
+            bool returnOk = await _userRepository.UpdateUser(user);
+            if (returnOk)
+                return RedirectToAction(nameof(Table));
         }
+        _logger.LogWarning("[UserController] User Update failed {@user}", user);
         return View(user);
     }
 
@@ -73,15 +90,22 @@ public class UserController : Controller
         var user = await _userRepository.GetUserById(id);
         if (user == null)
         {
-            return NotFound();
+            _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", id);
+            return BadRequest("User not found");
         }
         return View(user);
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        await _userRepository.DeleteUser(id);
+        bool returnOk = await _userRepository.DeleteUser(id);
+        if (!returnOk)
+        {
+            _logger.LogError("[UserController] User deletion failed for the UserId {UserId:0000}", id);
+            return BadRequest("User deletion failed");
+        }
         return RedirectToAction(nameof(Table));
     }
 }    

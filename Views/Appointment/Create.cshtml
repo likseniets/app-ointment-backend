@@ -1,21 +1,28 @@
 @model app_ointment_backend.Models.Appointment
 
-<h2>Create New Item</h2>
+<h2>Create New Appointment</h2>
 
-<form asp-action="Create">
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger"></div>
     <div class="form-group">
-        <label asp-for="CaregiverId"></label><span class="text-danger">Caretaker</span>
-        <input asp-for="CaregiverId" class="form-control" />
+<!-- Dropdown menus sourced from StackOverflow, logic and Id connections implemented with help from Cursor OpenAI extension for VSCode -->
+        <label for="CaregiverId">Select caregiver</label><span class="text-danger">*</span>
+        <select asp-for="CaregiverId" class="form-control" asp-items="ViewBag.CaregiverList">
+            <option value="">-- Select caregiver --</option>
+        </select>
         <span asp-validation-for="CaregiverId" class="text-danger"></span>
     </div>
     <div class="form-group">
-        <label for="Date">Select a Date:</label>
-        <input asp-for="Date" type="date" />
+        <label for="Date">Select Date & Time:</label>
+        <input asp-for="Date" class="form-control" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" />
         <span asp-validation-for="Date" class="text-danger"></span>
     </div>
     <div class="form-group">
-        <label asp-for="ClientId">Client</label>
-        <input asp-for="ClientId" class="form-control" />
+        <label for="ClientId">Select client</label>
+        <select asp-for="ClientId" class="form-control" asp-items="ViewBag.ClientList">
+            <option value="">-- Select client --</option>
+        </select>
         <span asp-validation-for="ClientId" class="text-danger"></span>
     </div>
     <div class="form-group">
