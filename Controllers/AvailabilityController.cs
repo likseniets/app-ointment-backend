@@ -91,18 +91,19 @@ public class AvailabilityController : Controller
     // POST: Availability/CreateInline
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateInline([FromForm] int caregiverId, [FromForm] DayOfWeek dayOfWeek, [FromForm] string startTime, [FromForm] string endTime)
+    public async Task<IActionResult> CreateInline([FromForm] int caregiverId, [FromForm] DayOfWeek dayOfWeek, [FromForm] string startTime, [FromForm] string endTime, [FromForm] string description)
     {
         // Debug logging to see what we're receiving
-        _logger.LogInformation("[AvailabilityController] Received availability: Day={Day}, Start={Start}, End={End}, CaregiverId={Id}", 
-            dayOfWeek, startTime, endTime, caregiverId);
-            
+        _logger.LogInformation("[AvailabilityController] Received availability: Day={Day}, Start={Start}, End={End}, CaregiverId={Id}, Description={Description}",
+            dayOfWeek, startTime, endTime, caregiverId, description);
+
         var availability = new Availability
         {
             CaregiverId = caregiverId,
             DayOfWeek = dayOfWeek,
             StartTime = startTime,
-            EndTime = endTime
+            EndTime = endTime,
+            Description = description
         };
 
         if (!ModelState.IsValid)
@@ -110,7 +111,7 @@ public class AvailabilityController : Controller
             var errors = string.Join(" ", ModelState.Values
                 .SelectMany(v => v.Errors)
                 .Select(e => e.ErrorMessage));
-            TempData["Error"] = string.IsNullOrEmpty(errors) ? 
+            TempData["Error"] = string.IsNullOrEmpty(errors) ?
                 "Please fill in all required fields correctly." : errors;
             return RedirectToAction(nameof(Manage), new { caregiverId = availability.CaregiverId });
         }
@@ -128,7 +129,7 @@ public class AvailabilityController : Controller
 
             // Parse and validate time range
             TimeSpan parsedStartTime, parsedEndTime;
-            if (!TimeSpan.TryParse(availability.StartTime, out parsedStartTime) || 
+            if (!TimeSpan.TryParse(availability.StartTime, out parsedStartTime) ||
                 !TimeSpan.TryParse(availability.EndTime, out parsedEndTime))
             {
                 TempData["Error"] = "Invalid time format. Please use HH:mm format";
