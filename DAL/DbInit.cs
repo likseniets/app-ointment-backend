@@ -8,11 +8,16 @@ public static class DBInit
     public static void Seed(IApplicationBuilder app)
     {
         using var serviceScope = app.ApplicationServices.CreateScope();
-        UserDbContext _userDbContext = serviceScope.ServiceProvider.GetRequiredService<UserDbContext>();
-        //_userDbContext.Database.EnsureDeleted();
-        //_userDbContext.Database.EnsureCreated();
+        var userRepository = serviceScope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var appointmentRepository = serviceScope.ServiceProvider.GetRequiredService<IAppointmentRepository>();
+        var availabilityRepository = serviceScope.ServiceProvider.GetRequiredService<IAvailabilityRepository>();
+        var context = serviceScope.ServiceProvider.GetRequiredService<UserDbContext>();
 
-        if (!_userDbContext.Users.Any())
+        // Only used for development
+        context.Database.EnsureDeleted(); // This will delete the existing database
+        context.Database.EnsureCreated(); // This will create a new database with all required tables
+
+        if (!context.Users.Any())
         {
             var users = new List<User>
             {
@@ -25,8 +30,7 @@ public static class DBInit
                     Phone = "46213657",
                     ImageUrl = "/images/artur.jpg"
                 },
-
-                new User
+                new Caregiver
                 {
                     Name = "Jesper",
                     Role = UserRole.Caregiver,
@@ -35,20 +39,20 @@ public static class DBInit
                     Phone = "82888222",
                     ImageUrl = "/images/jeppe.jpg"
                 },
-
-                new User
+                new Caregiver
                 {
                     Name = "Eskil",
-                    Role = UserRole.Client,
+                    Role = UserRole.Caregiver,
                     Adress = "Gokk",
                     Email = "s371414@oslomet.no",
                     Phone = "99884432",
                     ImageUrl = "/images/eskil.jpg"
-                },
-
+                }
             };
-            _userDbContext.AddRange(users);
-            _userDbContext.SaveChanges();
+
+            // Insert users directly so they're immediately available in the created database
+            context.AddRange(users);
+            context.SaveChanges();
         }
 
         //if (!context.Customers.Any())
@@ -62,54 +66,76 @@ public static class DBInit
         //    context.SaveChanges();
         //}
 
-        if (!_userDbContext.Appointments.Any())
+        if (!context.Appointments.Any())
         {
-            var appointments = new List<Appointment>
+            var caregiver = context.Users.FirstOrDefault(u => u.Role == UserRole.Caregiver);
+            var client = context.Users.FirstOrDefault(u => u.Role == UserRole.Client);
+
+            if (caregiver != null && client != null)
             {
-                new Appointment {
-                    AppointmentId = 2,
-                    Date = DateTime.Now,
-                    ClientId = 2,
-                    Client = new Client {
-                    Name = "Eskil",
-                    Role = UserRole.Client,
-                    Adress = "Gokk",
-                    Email = "s371414@oslomet.no",
-                    Phone = "99884432",
-                    ImageUrl = "/images/eskil.jpg"
-                },
-                CaregiverId = 1,
-                Caregiver = new Caregiver
+                var appointment = new Appointment
                 {
-                    Name = "Jesper",
-                    Role = UserRole.Caregiver,
-                    Adress = "Bislett",
-                    Email = "jemel7762@oslomet.no",
-                    Phone = "82888222",
-                    ImageUrl = "/images/jeppe.jpg"
-                },
-                Location = "Home"},
-            };
-            _userDbContext.AddRange(appointments);
-            _userDbContext.SaveChanges();
+                    Date = DateTime.Now,
+                    ClientId = client.UserId,
+                    CaregiverId = caregiver.UserId,
+                    Location = "Home"
+                };
+
+                // Insert appointment directly so it's immediately available
+                context.Appointments.Add(appointment);
+                context.SaveChanges();
+            }
         }
 
-        /*        if (!context.OrderItems.Any())
+        // Seed initial availability for caregivers
+        if (!context.Availabilities.Any())
+        {
+            var caregiver = context.Users.FirstOrDefault(u => u.Role == UserRole.Caregiver);
+
+            if (caregiver != null)
+            {
+                // Create availabilities for the next 7 days
+                var availabilities = new List<Availability>();
+                var startDate = DateTime.Today;
+                
+                // Add availability for next Monday and Wednesday
+                for (int i = 0; i < 7; i++)
                 {
-                    var orderItems = new List<OrderItem>
+                    var date = startDate.AddDays(i);
+                    if (date.DayOfWeek == DayOfWeek.Monday || date.DayOfWeek == DayOfWeek.Wednesday)
                     {
-                        new OrderItem { ItemId = 1, Quantity = 2, OrderId = 1},
-                        new OrderItem { ItemId = 2, Quantity = 1, OrderId = 1},
-                        new OrderItem { ItemId = 3, Quantity = 4, OrderId = 2},
-                    };
-                    foreach (var orderItem in orderItems)
-                    {
-                        var item = context.Items.Find(orderItem.ItemId);
-                        orderItem.OrderItemPrice = orderItem.Quantity * item?.Price ?? 0;
+                        availabilities.Add(new Availability
+                        {
+                            CaregiverId = caregiver.UserId,
+                            Date = date,
+                            StartTime = "09:00",
+                            EndTime = "17:00"
+                        });
                     }
-                    context.AddRange(orderItems);
-                    context.SaveChanges();
                 }
-        */
+
+                // Insert availability slots directly so they're available immediately
+                context.Availabilities.AddRange(availabilities);
+                context.SaveChanges();
+            }
+        }
     }
+
+    /*        if (!context.OrderItems.Any())
+            {
+                var orderItems = new List<OrderItem>
+                {
+                    new OrderItem { ItemId = 1, Quantity = 2, OrderId = 1},
+                    new OrderItem { ItemId = 2, Quantity = 1, OrderId = 1},
+                    new OrderItem { ItemId = 3, Quantity = 4, OrderId = 2},
+                };
+                foreach (var orderItem in orderItems)
+                {
+                    var item = context.Items.Find(orderItem.ItemId);
+                    orderItem.OrderItemPrice = orderItem.Quantity * item?.Price ?? 0;
+                }
+                context.AddRange(orderItems);
+                context.SaveChanges();
+            }
+    */
 }
