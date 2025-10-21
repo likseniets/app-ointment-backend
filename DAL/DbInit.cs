@@ -94,23 +94,25 @@ public static class DBInit
 
             if (caregiver != null)
             {
-                var availabilities = new List<Availability>
+                // Create availabilities for the next 7 days
+                var availabilities = new List<Availability>();
+                var startDate = DateTime.Today;
+                
+                // Add availability for next Monday and Wednesday
+                for (int i = 0; i < 7; i++)
                 {
-                    new Availability
+                    var date = startDate.AddDays(i);
+                    if (date.DayOfWeek == DayOfWeek.Monday || date.DayOfWeek == DayOfWeek.Wednesday)
                     {
-                        CaregiverId = caregiver.UserId,
-                        DayOfWeek = DayOfWeek.Monday,
-                        StartTime = "09:00",
-                        EndTime = "17:00"
-                    },
-                    new Availability
-                    {
-                        CaregiverId = caregiver.UserId,
-                        DayOfWeek = DayOfWeek.Wednesday,
-                        StartTime = "09:00",
-                        EndTime = "17:00"
+                        availabilities.Add(new Availability
+                        {
+                            CaregiverId = caregiver.UserId,
+                            Date = date,
+                            StartTime = "09:00",
+                            EndTime = "17:00"
+                        });
                     }
-                };
+                }
 
                 // Insert availability slots directly so they're available immediately
                 context.Availabilities.AddRange(availabilities);
