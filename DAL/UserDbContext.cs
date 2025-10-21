@@ -14,6 +14,7 @@ public class UserDbContext : DbContext
 	public DbSet<Client> Clients { get; set; }
 	public DbSet<Caregiver> Caregivers { get; set; }
 	public DbSet<Appointment> Appointments { get; set; }
+	public DbSet<Availability> Availabilities { get; set; }
 
 	protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 	{
