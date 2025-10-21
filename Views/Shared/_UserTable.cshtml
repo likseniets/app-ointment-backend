@@ -21,6 +21,11 @@
                 <td>
                     <a asp-action="Update" asp-route-id="@user.UserId">Update</a>
                     <a asp-action="Delete" asp-route-id="@user.UserId">Delete</a>
+                    @if (user.Role == UserRole.Caregiver)
+                    {
+                        <span> | </span>
+                        <a asp-controller="Availability" asp-action="Manage" asp-route-caregiverId="@user.UserId">Manage Availability</a>
+                    }
                 </td>
             </tr>
         }

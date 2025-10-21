@@ -1,0 +1,97 @@
+@model app_ointment_backend.Models.Caregiver
+
+@{
+    ViewData["Title"] = "Manage Availability";
+}
+
+<h2>Manage Availability for @Model.Name</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <h3>Current Availability</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Day of Week</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Availability != null)
+                {
+                    @foreach (Availability slot in Model.Availability)
+                    {
+                        <tr>
+                            <td>@slot.DayOfWeek</td>
+                            <td>@slot.StartTime</td>
+                            <td>@slot.EndTime</td>
+                            <td>
+                                <form asp-action="Delete" asp-route-id="@slot.AvailabilityId" method="post"
+                                    style="display:inline">
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Are you sure you want to delete this availability slot?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h3>Add New Availability</h3>
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">
+                @TempData["Error"]
+            </div>
+        }
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success">
+                @TempData["Success"]
+            </div>
+        }
+        <form asp-action="CreateInline" method="post">
+            <input type="hidden" name="caregiverId" value="@Model.UserId" />
+
+            <div class="form-group">
+                <label for="dayOfWeek">Day of Week</label>
+                <select id="dayOfWeek" name="dayOfWeek" class="form-control">
+                    @foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
+                    {
+                        <option value="@day">@day</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="startTime">Start Time</label>
+                <input type="time" id="startTime" name="startTime" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label for="endTime">End Time</label>
+                <input type="time" id="endTime" name="endTime" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" id="description" name="description" class="form-control" />
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Add Availability</button>
+        </form>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-controller="User" asp-action="Table" class="btn btn-secondary">Back to Users</a>
+</div>
