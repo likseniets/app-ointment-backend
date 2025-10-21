@@ -91,16 +91,16 @@ public class AvailabilityController : Controller
     // POST: Availability/CreateInline
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateInline([FromForm] int caregiverId, [FromForm] DayOfWeek dayOfWeek, [FromForm] string startTime, [FromForm] string endTime, [FromForm] string description)
+    public async Task<IActionResult> CreateInline([FromForm] int caregiverId, [FromForm] DateTime date, [FromForm] string startTime, [FromForm] string endTime, [FromForm] string description)
     {
         // Debug logging to see what we're receiving
         _logger.LogInformation("[AvailabilityController] Received availability: Day={Day}, Start={Start}, End={End}, CaregiverId={Id}, Description={Description}",
-            dayOfWeek, startTime, endTime, caregiverId, description);
+            date, startTime, endTime, caregiverId, description);
 
         var availability = new Availability
         {
             CaregiverId = caregiverId,
-            DayOfWeek = dayOfWeek,
+            Date = date,
             StartTime = startTime,
             EndTime = endTime,
             Description = description
