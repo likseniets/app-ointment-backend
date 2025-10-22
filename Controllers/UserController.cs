@@ -5,6 +5,7 @@ using app_ointment_backend.DAL;
 
 namespace app_ointment_backend.Controllers;
 
+// UserController setup based on course demos for ItemController
 public class UserController : Controller
 {
     private readonly IUserRepository _userRepository;
@@ -18,7 +19,7 @@ public class UserController : Controller
     public async Task<IActionResult> Table()
     {
         var users = await _userRepository.GetAll();
-        if(users == null)
+        if (users == null)
         {
             _logger.LogError("[UserController] User list not found while executing _userRepository.GetAll()");
             return NotFound("User list not found");
@@ -38,7 +39,7 @@ public class UserController : Controller
         return View(user);
     }
 
-     [HttpGet]
+    [HttpGet]
     public IActionResult Create()
     {
         return View();

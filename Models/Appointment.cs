@@ -17,6 +17,8 @@ public class Appointment
     public virtual User Client { get; set; } = default!;
     public required string Location { get; set; }
 
+
+    // validate the date input for making appointments
     public static ValidationResult? ValidateFutureDate(DateTime value, ValidationContext _) 
     {
         return value > DateTime.Now ? ValidationResult.Success : new ValidationResult("The appointment date must be in the future, time travel is not enabled yet."); 
