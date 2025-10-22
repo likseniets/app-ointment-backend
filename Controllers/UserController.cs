@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using app_ointment_backend.Models;
 using app_ointment_backend.ViewModels;
 using app_ointment_backend.DAL;
+using Microsoft.AspNetCore.Authorization;
 
 namespace app_ointment_backend.Controllers;
 
