@@ -11,6 +11,7 @@ using app_ointment_backend.DAL;
 
 namespace app_ointment_backend.Controllers;
 
+// Controller setup based on course demos
 public class AppointmentController : Controller
 {
     private readonly UserDbContext _userDbContext;
@@ -19,7 +20,7 @@ public class AppointmentController : Controller
 
     public AppointmentController(UserDbContext userDbContext, IAppointmentRepository appointmentRepository, ILogger<AppointmentController> logger)
     {
-        _userDbContext = userDbContext; 
+        _userDbContext = userDbContext;
         _appointmentRepository = appointmentRepository;
         _logger = logger;
     }
@@ -34,7 +35,7 @@ public class AppointmentController : Controller
         var appointmentsViewModel = new AppointmentsViewModel(appointments, "Table");
         return View(appointmentsViewModel);
     }
-    
+
     [HttpGet]
     public IActionResult Create()
     {
@@ -83,7 +84,7 @@ public class AppointmentController : Controller
                 ModelState.AddModelError(string.Empty, "Unable to save appointment. Try again.");
             }
         }
-        
+
         // Rebuilds dropdowns for redisplay
         /* var caregivers = _userDbContext.Users  
             .Where(u => u.Role == UserRole.Caregiver)
@@ -168,7 +169,7 @@ public class AppointmentController : Controller
             .Where(u => u.Role == UserRole.Client)
             .Select(u => new { u.UserId, u.Name })
             .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId); 
+        ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId);
         return View(appointment);
     }
 
