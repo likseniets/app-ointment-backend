@@ -36,46 +36,108 @@ public class AppointmentController : Controller
     }
     
     [HttpGet]
-    public IActionResult Create()
+    public async Task<IActionResult> Create(int? SelectedCaregiverId, DateTime? SelectedDate, int? SelectedClientId)
     {
-        var caregivers = _userDbContext.Users
-            .Where(u => u.Role == UserRole.Caregiver)
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.CaregiverList = new SelectList(caregivers, "UserId", "Name");
-        var clients = _userDbContext.Users
-            .Where(u => u.Role == UserRole.Client)
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name");
-        return View();
+        var vm = await BuildCreateViewModel(SelectedCaregiverId, SelectedDate, SelectedClientId);
+        return View(vm);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(Appointment appointment)
+    public async Task<IActionResult> Create(app_ointment_backend.ViewModels.CreateAppointmentViewModel vm)
     {
+        // Basic field presence checks
+        if (!vm.SelectedCaregiverId.HasValue)
+        {
+            ModelState.AddModelError("SelectedCaregiverId", "Please select a caregiver.");
+        }
+        if (!vm.SelectedClientId.HasValue)
+        {
+            ModelState.AddModelError("SelectedClientId", "Please select a client.");
+        }
+        if (!vm.SelectedDate.HasValue)
+        {
+            ModelState.AddModelError("SelectedDate", "Please select a date.");
+        }
+        if (string.IsNullOrWhiteSpace(vm.SelectedTime))
+        {
+            ModelState.AddModelError("SelectedTime", "Please select a time slot.");
+        }
+
         if (ModelState.IsValid)
         {
             try
             {
-                // Basic sanity: referenced users must exist
-                bool caregiverExists = await _userDbContext.Users.AnyAsync(u => u.UserId == appointment.CaregiverId && u.Role == UserRole.Caregiver);
-                bool clientExists = await _userDbContext.Users.AnyAsync(u => u.UserId == appointment.ClientId && u.Role == UserRole.Client);
-                if (!caregiverExists)
+                int caregiverId = vm.SelectedCaregiverId!.Value;
+                int clientId = vm.SelectedClientId!.Value;
+                DateTime day = vm.SelectedDate!.Value.Date;
+                if (!TimeSpan.TryParse(vm.SelectedTime, out var timeOfDay))
                 {
-                    ModelState.AddModelError("CaregiverId", "Selected caregiver does not exist.");
+                    ModelState.AddModelError("SelectedTime", "Invalid time format.");
                 }
-                if (!clientExists)
+                else
                 {
-                    ModelState.AddModelError("ClientId", "Selected client does not exist.");
-                }
+                    var appointmentDate = day.Add(timeOfDay);
 
-                if (ModelState.IsValid)
-                {
-                    bool returnOk = await _appointmentRepository.CreateAppointment(appointment);
-                    if (returnOk)
-                        return RedirectToAction(nameof(Table));
+                    // Sanity: users exist
+                    bool caregiverExists = await _userDbContext.Users.AnyAsync(u => u.UserId == caregiverId && u.Role == UserRole.Caregiver);
+                    bool clientExists = await _userDbContext.Users.AnyAsync(u => u.UserId == clientId && u.Role == UserRole.Client);
+                    if (!caregiverExists)
+                    {
+                        ModelState.AddModelError("SelectedCaregiverId", "Selected caregiver does not exist.");
+                    }
+                    if (!clientExists)
+                    {
+                        ModelState.AddModelError("SelectedClientId", "Selected client does not exist.");
+                    }
+
+                    // Whole hour check
+                    if (appointmentDate.Minute != 0 || appointmentDate.Second != 0)
+                    {
+                        ModelState.AddModelError("SelectedTime", "Appointments must start on the hour (e.g., 09:00).");
+                    }
+
+                    // Availability check
+                    var windows = await _userDbContext.Availabilities
+                        .Where(a => a.CaregiverId == caregiverId && a.Date.Date == day)
+                        .ToListAsync();
+                    bool withinAvailability = windows.Any(w =>
+                    {
+                        bool startOk = TimeSpan.TryParse(w.StartTime, out var s);
+                        bool endOk = TimeSpan.TryParse(w.EndTime, out var e);
+                        if (!startOk || !endOk) return false;
+                        var startHour = s.Minutes > 0 ? s.Hours + 1 : s.Hours;
+                        var endExclusive = e.Hours;
+                        return appointmentDate.Hour >= startHour && appointmentDate.Hour < endExclusive;
+                    });
+                    if (!withinAvailability)
+                    {
+                        ModelState.AddModelError("SelectedTime", "Selected time is outside the caregiver's availability.");
+                    }
+
+                    // Double-booked check
+                    bool alreadyBooked = await _userDbContext.Appointments
+                        .AnyAsync(a => a.CaregiverId == caregiverId && a.Date.Date == day && a.Date.Hour == appointmentDate.Hour);
+                    if (alreadyBooked)
+                    {
+                        ModelState.AddModelError("SelectedTime", "Selected time slot is already booked.");
+                    }
+
+                    if (ModelState.IsValid)
+                    {
+                        var appointment = new Appointment
+                        {
+                            CaregiverId = caregiverId,
+                            ClientId = clientId,
+                            Date = appointmentDate,
+                            Location = vm.Location
+                        };
+
+                        bool returnOk = await _appointmentRepository.CreateAppointment(appointment);
+                        if (returnOk)
+                            return RedirectToAction(nameof(Table));
+                        ModelState.AddModelError(string.Empty, "Unable to save appointment. Try again.");
+                    }
                 }
             }
             catch (DbUpdateException)
@@ -83,19 +145,86 @@ public class AppointmentController : Controller
                 ModelState.AddModelError(string.Empty, "Unable to save appointment. Try again.");
             }
         }
-        
-        // Rebuilds dropdowns for redisplay
-        /* var caregivers = _userDbContext.Users  
+
+        // Rebuild view model for redisplay with timeslots
+        var rebuilt = await BuildCreateViewModel(vm.SelectedCaregiverId, vm.SelectedDate, vm.SelectedClientId);
+        rebuilt.SelectedTime = vm.SelectedTime;
+        rebuilt.Location = vm.Location;
+        return View(rebuilt);
+    }
+
+    private async Task<ViewModels.CreateAppointmentViewModel> BuildCreateViewModel(int? caregiverId, DateTime? date, int? clientId)
+    {
+        var caregivers = _userDbContext.Users
             .Where(u => u.Role == UserRole.Caregiver)
-            .Select(u => new { u.UserId, u.Name })
+            .Select(u => new SelectListItem { Value = u.UserId.ToString(), Text = u.Name, Selected = caregiverId.HasValue && caregiverId.Value == u.UserId })
             .ToList();
-        ViewBag.CaregiverList = new SelectList(caregivers, "UserId", "Name");
         var clients = _userDbContext.Users
             .Where(u => u.Role == UserRole.Client)
-            .Select(u => new { u.UserId, u.Name })
+            .Select(u => new SelectListItem { Value = u.UserId.ToString(), Text = u.Name, Selected = clientId.HasValue && clientId.Value == u.UserId })
             .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name"); */
-        return View(appointment);
+
+        var vm = new ViewModels.CreateAppointmentViewModel
+        {
+            SelectedCaregiverId = caregiverId,
+            SelectedClientId = clientId,
+            SelectedDate = date?.Date,
+            Caregivers = caregivers,
+            Clients = clients,
+            TimeSlots = new List<SelectListItem>(),
+            DateHasAvailability = false
+        };
+
+        if (caregiverId.HasValue && date.HasValue)
+        {
+            vm.TimeSlots = await ComputeTimeSlots(caregiverId.Value, date.Value.Date, clientId);
+            vm.DateHasAvailability = vm.TimeSlots.Any();
+        }
+
+        return vm;
+    }
+
+    private async Task<IEnumerable<SelectListItem>> ComputeTimeSlots(int caregiverId, DateTime day, int? clientId)
+    {
+        var items = new List<SelectListItem>();
+        var windows = await _userDbContext.Availabilities
+            .Where(a => a.CaregiverId == caregiverId && a.Date.Date == day.Date)
+            .ToListAsync();
+
+        var slotHours = new HashSet<int>();
+        foreach (var w in windows)
+        {
+            if (!TimeSpan.TryParse(w.StartTime, out var s)) continue;
+            if (!TimeSpan.TryParse(w.EndTime, out var e)) continue;
+            var startHour = s.Minutes > 0 ? s.Hours + 1 : s.Hours;
+            var endExclusive = e.Hours;
+            for (int h = startHour; h < endExclusive; h++)
+            {
+                if (h >= 0 && h <= 23) slotHours.Add(h);
+            }
+        }
+
+        var existing = await _userDbContext.Appointments
+            .Where(a => a.CaregiverId == caregiverId && a.Date.Date == day.Date)
+            .Select(a => new { a.Date, a.ClientId })
+            .ToListAsync();
+
+        foreach (var h in slotHours.OrderBy(h => h))
+        {
+            var bookedBy = existing.FirstOrDefault(x => x.Date.Hour == h)?.ClientId;
+            bool isBooked = bookedBy != null;
+            bool bySelf = clientId.HasValue && bookedBy == clientId.Value;
+            var label = new TimeSpan(h, 0, 0).ToString(@"hh\:mm");
+            if (isBooked) label += bySelf ? " (booked by you)" : " (booked)";
+            items.Add(new SelectListItem
+            {
+                Text = label,
+                Value = isBooked ? string.Empty : new TimeSpan(h, 0, 0).ToString(@"hh\:mm"),
+                Disabled = isBooked
+            });
+        }
+
+        return items;
     }
 
     [HttpGet]

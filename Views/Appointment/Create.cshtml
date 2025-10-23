@@ -1,35 +1,69 @@
-@model app_ointment_backend.Models.Appointment
+@model app_ointment_backend.ViewModels.CreateAppointmentViewModel
 
 <h2>Create New Appointment</h2>
 
-<form asp-action="Create" method="post">
-    @Html.AntiForgeryToken()
-    <div asp-validation-summary="All" class="text-danger"></div>
-    <div class="form-group">
-<!-- Dropdown menus sourced from StackOverflow, logic and Id connections implemented with help from Cursor OpenAI extension for VSCode -->
-        <label for="CaregiverId">Select caregiver</label><span class="text-danger">*</span>
-        <select asp-for="CaregiverId" class="form-control" asp-items="ViewBag.CaregiverList">
-            <option value="">-- Select caregiver --</option>
-        </select>
-        <span asp-validation-for="CaregiverId" class="text-danger"></span>
+<div>
+    <div>
+        <form asp-action="Create" method="get">
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <div class="form-group">
+                <label for="SelectedCaregiverId">Select caregiver</label>
+                <select asp-for="SelectedCaregiverId" class="form-control" asp-items="Model.Caregivers">
+                    <option value="">-- Select caregiver --</option>
+                </select>
+                <span asp-validation-for="SelectedCaregiverId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label for="SelectedClientId">Select client</label>
+                <select asp-for="SelectedClientId" class="form-control" asp-items="Model.Clients">
+                    <option value="">-- Select client --</option>
+                </select>
+                <span asp-validation-for="SelectedClientId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label for="SelectedDate">Select date</label>
+                <input asp-for="SelectedDate" class="form-control" type="date" />
+                <span asp-validation-for="SelectedDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                @if (Model.SelectedCaregiverId.HasValue && Model.SelectedDate.HasValue)
+                {
+                    if (Model.DateHasAvailability)
+                    {
+                        <div>Selected date has available time slots.</div>
+                    }
+                    else
+                    {
+                        <div>No availability for the selected date.</div>
+                    }
+                }
+            </div>
+            <button type="submit" class="btn btn-secondary">Show Available Times</button>
+        </form>
     </div>
-    <div class="form-group">
-        <label for="Date">Select Date & Time:</label>
-        <input asp-for="Date" class="form-control" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" />
-        <span asp-validation-for="Date" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label for="ClientId">Select client</label>
-        <select asp-for="ClientId" class="form-control" asp-items="ViewBag.ClientList">
-            <option value="">-- Select client --</option>
-        </select>
-        <span asp-validation-for="ClientId" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="Location">Location</label>
-        <input asp-for="Location" class="form-control" />
-        <span asp-validation-for="Location" class="text-danger"></span>
-    </div>
-    <button type="submit" class="btn btn-primary">Create</button>
-    <a asp-action="Table" class="btn btn-secondary">Back to Table View</a>
-</form>
+
+    <hr />
+
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <input type="hidden" asp-for="SelectedCaregiverId" />
+        <input type="hidden" asp-for="SelectedClientId" />
+        <input type="hidden" asp-for="SelectedDate" />
+
+        <div class="form-group">
+            <label for="SelectedTime">Time Slot</label>
+            <select asp-for="SelectedTime" class="form-control" asp-items="Model.TimeSlots">
+                <option value="">-- Select a time --</option>
+            </select>
+            <span asp-validation-for="SelectedTime" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="Location">Location</label>
+            <input asp-for="Location" class="form-control" />
+            <span asp-validation-for="Location" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-primary">Create</button>
+        <a asp-action="Table" class="btn btn-secondary">Back to Table View</a>
+    </form>
+</div>

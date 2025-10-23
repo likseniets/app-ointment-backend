@@ -54,6 +54,112 @@ public class AvailabilityController : Controller
         return View(caregiver);
     }
 
+    // GET: Availability/Days?caregiverId=1&from=2025-01-01&to=2025-01-31
+    // Returns a JSON array of yyyy-MM-dd strings for dates that have availability for the caregiver
+    [HttpGet]
+    public async Task<IActionResult> Days([FromQuery] int caregiverId, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
+    {
+        if (caregiverId <= 0)
+        {
+            _logger.LogWarning("[AvailabilityController] Missing or invalid caregiverId on Days endpoint");
+            return BadRequest("Missing caregiverId");
+        }
+
+        var caregiverExists = await _userDbContext.Users.AnyAsync(u => u.UserId == caregiverId && u.Role == UserRole.Caregiver);
+        if (!caregiverExists)
+        {
+            _logger.LogError("[AvailabilityController] Caregiver not found for Id {CaregiverId:0000}", caregiverId);
+            return NotFound("Caregiver not found");
+        }
+
+        DateTime fromDate = (from?.Date) ?? DateTime.Today;
+        DateTime toDate = (to?.Date) ?? fromDate.AddDays(60);
+
+        try
+        {
+            var dates = await _userDbContext.Availabilities
+                .Where(a => a.CaregiverId == caregiverId && a.Date.Date >= fromDate && a.Date.Date <= toDate)
+                .Select(a => a.Date.Date)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToListAsync();
+
+            var result = dates.Select(d => d.ToString("yyyy-MM-dd")).ToList();
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[AvailabilityController] Failed to query available days for caregiver {CaregiverId:0000}. Error: {Error}", caregiverId, e.Message);
+            return BadRequest("Failed to query available days");
+        }
+    }
+
+    // GET: Availability/Slots?caregiverId=1&date=2025-10-23&clientId=2
+    // Returns JSON array of { time: "HH:mm", booked: bool, bookedBySelf: bool }
+    [HttpGet]
+    public async Task<IActionResult> Slots([FromQuery] int caregiverId, [FromQuery] DateTime date, [FromQuery] int? clientId)
+    {
+        if (caregiverId <= 0)
+        {
+            _logger.LogWarning("[AvailabilityController] Missing or invalid caregiverId on Slots endpoint");
+            return BadRequest("Missing caregiverId");
+        }
+
+        var day = date.Date;
+
+        var caregiverExists = await _userDbContext.Users.AnyAsync(u => u.UserId == caregiverId && u.Role == UserRole.Caregiver);
+        if (!caregiverExists)
+        {
+            _logger.LogError("[AvailabilityController] Caregiver not found for Id {CaregiverId:0000}", caregiverId);
+            return NotFound("Caregiver not found");
+        }
+
+        try
+        {
+            var windows = await _userDbContext.Availabilities
+                .Where(a => a.CaregiverId == caregiverId && a.Date.Date == day)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var slotStarts = new HashSet<int>();
+            foreach (var w in windows)
+            {
+                if (!TimeSpan.TryParse(w.StartTime, out var start)) continue; // Validation occurs on create; guard anyway
+                if (!TimeSpan.TryParse(w.EndTime, out var end)) continue;
+                // Use whole-hour slots; start rounds up, end is exclusive
+                var firstHour = start.Minutes > 0 ? start.Hours + 1 : start.Hours;
+                var lastExclusive = end.Hours; // end is exclusive; e.g., 09-17 => 09..16
+                for (int h = firstHour; h < lastExclusive; h++)
+                {
+                    if (h >= 0 && h <= 23) slotStarts.Add(h);
+                }
+            }
+
+            var existing = await _userDbContext.Appointments
+                .Where(a => a.CaregiverId == caregiverId && a.Date.Date == day)
+                .Select(a => new { a.Date, a.ClientId })
+                .ToListAsync();
+
+            var result = slotStarts
+                .OrderBy(h => h)
+                .Select(h =>
+                {
+                    var bookedBy = existing.FirstOrDefault(x => x.Date.Hour == h)?.ClientId;
+                    bool booked = bookedBy != null;
+                    bool bySelf = clientId.HasValue && bookedBy == clientId.Value;
+                    return new { time = new TimeSpan(h, 0, 0).ToString(@"hh\:mm"), booked, bookedBySelf = bySelf };
+                })
+                .ToList();
+
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[AvailabilityController] Failed to query slots for caregiver {CaregiverId:0000} on {Date}. Error: {Error}", caregiverId, day.ToString("yyyy-MM-dd"), e.Message);
+            return BadRequest("Failed to query slots");
+        }
+    }
+
     // POST: Availability/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
