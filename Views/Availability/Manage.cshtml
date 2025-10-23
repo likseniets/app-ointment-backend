@@ -7,40 +7,53 @@
 <h2>Manage Availability for @Model.Name</h2>
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <h3>Current Availability</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Start Time</th>
-                    <th>End Time</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Availability != null)
-                {
-                    @foreach (Availability slot in Model.Availability)
+        @if (Model.Availability != null && Model.Availability.Any())
+        {
+            var grouped = Model.Availability
+                .OrderBy(a => a.Date)
+                .ThenBy(a => a.StartTime)
+                .GroupBy(a => a.Date.Date)
+                .ToList();
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Available Time Slots</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var g in grouped)
                     {
+                        var groupId = $"day-{g.Key:yyyyMMdd}";
+                        var firstId = g.First().AvailabilityId;
                         <tr>
-                            <td>@slot.Date.ToString("dd/MM/yyyy")</td>
-                            <td>@slot.StartTime</td>
-                            <td>@slot.EndTime</td>
+                            <td>@g.Key.ToString("dd/MM/yyyy")</td>
                             <td>
-                                <form asp-action="Delete" asp-route-id="@slot.AvailabilityId" method="post"
-                                    style="display:inline">
-                                    <button type="submit" class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Are you sure you want to delete this availability slot?')">
-                                        Delete
-                                    </button>
+                                <select id="@groupId-select" class="form-select" onchange="document.getElementById('@groupId-hidden').value=this.value;">
+                                    @foreach (var s in g)
+                                    {
+                                        <option value="@s.AvailabilityId">@s.StartTime - @s.EndTime</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <form asp-action="Delete" method="post" onsubmit="document.getElementById('@groupId-hidden').value=document.getElementById('@groupId-select').value; return confirm('Delete selected slot?');">
+                                    <input type="hidden" name="id" id="@groupId-hidden" value="@firstId" />
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete Selected Slot</button>
                                 </form>
                             </td>
                         </tr>
                     }
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted">No availability defined.</p>
+        }
     </div>
 </div>
 
@@ -69,12 +82,11 @@
 
             <div class="form-group">
                 <label for="startTime">Start Time</label>
-                <input type="time" id="startTime" name="startTime" class="form-control" required />
+                <input type="time" id="startTime" name="startTime" class="form-control" step="3600" required />
             </div>
-
             <div class="form-group">
                 <label for="endTime">End Time</label>
-                <input type="time" id="endTime" name="endTime" class="form-control" required />
+                <input type="time" id="endTime" name="endTime" class="form-control" step="3600" required />
             </div>
 
             <div class="form-group">
@@ -84,6 +96,41 @@
 
             <button type="submit" class="btn btn-primary mt-3">Add Availability</button>
         </form>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-10">
+        <h3>Booked Appointments</h3>
+        @{
+            var appts = ViewBag.CaregiverAppointments as IEnumerable<Appointment>;
+        }
+        @if (appts != null && appts.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Client</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in appts)
+                    {
+                        <tr>
+                            <td>@a.Date.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@(a.Client?.Name ?? "-")</td>
+                            <td>@a.Location</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted">No booked appointments yet.</p>
+        }
     </div>
 </div>
 

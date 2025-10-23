@@ -42,7 +42,7 @@ public static class DBInit
                 new Caregiver
                 {
                     Name = "Eskil",
-                    Role = UserRole.Caregiver,
+                    Role = UserRole.Client,
                     Adress = "Gokk",
                     Email = "s371414@oslomet.no",
                     Phone = "99884432",
@@ -87,34 +87,36 @@ public static class DBInit
             }
         }
 
-        // Seed initial availability for caregivers
+        // Seed initial availability for all caregivers as 1-hour slots
         if (!context.Availabilities.Any())
         {
-            var caregiver = context.Users.FirstOrDefault(u => u.Role == UserRole.Caregiver);
-
-            if (caregiver != null)
+            var caregivers = context.Users.Where(u => u.Role == UserRole.Caregiver).ToList();
+            if (caregivers.Any())
             {
-                // Create availabilities for the next 7 days
-                var availabilities = new List<Availability>();
                 var startDate = DateTime.Today;
-                
-                // Add availability for next Monday and Wednesday
-                for (int i = 0; i < 7; i++)
+                var availabilities = new List<Availability>();
+                foreach (var cg in caregivers)
                 {
-                    var date = startDate.AddDays(i);
-                    if (date.DayOfWeek == DayOfWeek.Monday || date.DayOfWeek == DayOfWeek.Wednesday)
+                    for (int i = 0; i < 7; i++)
                     {
-                        availabilities.Add(new Availability
+                        var date = startDate.AddDays(i);
+                        if (date.DayOfWeek == DayOfWeek.Monday || date.DayOfWeek == DayOfWeek.Wednesday)
                         {
-                            CaregiverId = caregiver.UserId,
-                            Date = date,
-                            StartTime = "09:00",
-                            EndTime = "17:00"
-                        });
+                            // Create hourly slots between 09:00 and 17:00
+                            for (var hour = 9; hour < 17; hour++)
+                            {
+                                availabilities.Add(new Availability
+                                {
+                                    CaregiverId = cg.UserId,
+                                    Date = date,
+                                    StartTime = new TimeSpan(hour, 0, 0).ToString(@"hh\:mm"),
+                                    EndTime = new TimeSpan(hour + 1, 0, 0).ToString(@"hh\:mm")
+                                });
+                            }
+                        }
                     }
                 }
 
-                // Insert availability slots directly so they're available immediately
                 context.Availabilities.AddRange(availabilities);
                 context.SaveChanges();
             }

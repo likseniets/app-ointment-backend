@@ -1,4 +1,12 @@
 @model IEnumerable<Appointment>
+@using Microsoft.AspNetCore.Http
+
+@{
+    var roleInt = Context.Session.GetInt32("CurrentUserRole");
+    var currentUserId = Context.Session.GetInt32("CurrentUserId");
+    var isAdmin = roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Admin;
+    var isClient = roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Client;
+}
 
 <div class="container">
     <table class='table table-striped'>
@@ -12,6 +20,7 @@
         </tr>
         @foreach (var appointment in Model)
         {
+            var canEdit = isAdmin || (isClient && currentUserId.HasValue && appointment.ClientId == currentUserId.Value);
             <tr>
                 <td>@appointment.AppointmentId</td>
                 <td>@(appointment.Client?.Name ?? "-")</td>
@@ -19,8 +28,11 @@
                 <td>@appointment.Date</td>
                 <td>@appointment.Location</td>
                 <td>
-                    <a asp-action="Update" asp-route-id="@appointment.AppointmentId">Update</a>
-                    <a asp-action="Delete" asp-route-id="@appointment.AppointmentId">Delete</a>
+                    @if (canEdit)
+                    {
+                        <a asp-action="Update" asp-route-id="@appointment.AppointmentId">Update</a>
+                        <a asp-action="Delete" asp-route-id="@appointment.AppointmentId" class="ms-2">Delete</a>
+                    }
                 </td>
             </tr>
         }
