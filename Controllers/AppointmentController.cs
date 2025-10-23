@@ -18,6 +18,7 @@ public class AppointmentController : Controller
     private readonly IAppointmentRepository _appointmentRepository;
     private readonly ILogger<AppointmentController> _logger;
 
+    // Still neeeds userDbContext for fetching user data
     public AppointmentController(UserDbContext userDbContext, IAppointmentRepository appointmentRepository, ILogger<AppointmentController> logger)
     {
         _userDbContext = userDbContext;
@@ -147,7 +148,6 @@ public class AppointmentController : Controller
             }
         }
 
-<<<<<<< HEAD
         // Rebuild view model for redisplay with timeslots
         var rebuilt = await BuildCreateViewModel(vm.SelectedCaregiverId, vm.SelectedDate, vm.SelectedClientId);
         rebuilt.SelectedTime = vm.SelectedTime;
@@ -158,10 +158,6 @@ public class AppointmentController : Controller
     private async Task<ViewModels.CreateAppointmentViewModel> BuildCreateViewModel(int? caregiverId, DateTime? date, int? clientId)
     {
         var caregivers = _userDbContext.Users
-=======
-        // Rebuilds dropdowns for redisplay
-        /* var caregivers = _userDbContext.Users  
->>>>>>> f6ca18230721bd73b6eabbf28ccb3f25231ddc0d
             .Where(u => u.Role == UserRole.Caregiver)
             .Select(u => new SelectListItem { Value = u.UserId.ToString(), Text = u.Name, Selected = caregiverId.HasValue && caregiverId.Value == u.UserId })
             .ToList();
