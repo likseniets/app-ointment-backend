@@ -11,6 +11,7 @@ using app_ointment_backend.DAL;
 
 namespace app_ointment_backend.Controllers;
 
+// Controller setup based on course demos
 public class AppointmentController : Controller
 {
     private readonly UserDbContext _userDbContext;
@@ -19,7 +20,7 @@ public class AppointmentController : Controller
 
     public AppointmentController(UserDbContext userDbContext, IAppointmentRepository appointmentRepository, ILogger<AppointmentController> logger)
     {
-        _userDbContext = userDbContext; 
+        _userDbContext = userDbContext;
         _appointmentRepository = appointmentRepository;
         _logger = logger;
     }
@@ -34,7 +35,7 @@ public class AppointmentController : Controller
         var appointmentsViewModel = new AppointmentsViewModel(appointments, "Table");
         return View(appointmentsViewModel);
     }
-    
+
     [HttpGet]
     public async Task<IActionResult> Create(int? SelectedCaregiverId, DateTime? SelectedDate, int? SelectedClientId)
     {
@@ -146,6 +147,7 @@ public class AppointmentController : Controller
             }
         }
 
+<<<<<<< HEAD
         // Rebuild view model for redisplay with timeslots
         var rebuilt = await BuildCreateViewModel(vm.SelectedCaregiverId, vm.SelectedDate, vm.SelectedClientId);
         rebuilt.SelectedTime = vm.SelectedTime;
@@ -156,6 +158,10 @@ public class AppointmentController : Controller
     private async Task<ViewModels.CreateAppointmentViewModel> BuildCreateViewModel(int? caregiverId, DateTime? date, int? clientId)
     {
         var caregivers = _userDbContext.Users
+=======
+        // Rebuilds dropdowns for redisplay
+        /* var caregivers = _userDbContext.Users  
+>>>>>>> f6ca18230721bd73b6eabbf28ccb3f25231ddc0d
             .Where(u => u.Role == UserRole.Caregiver)
             .Select(u => new SelectListItem { Value = u.UserId.ToString(), Text = u.Name, Selected = caregiverId.HasValue && caregiverId.Value == u.UserId })
             .ToList();
@@ -297,7 +303,7 @@ public class AppointmentController : Controller
             .Where(u => u.Role == UserRole.Client)
             .Select(u => new { u.UserId, u.Name })
             .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId); 
+        ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId);
         return View(appointment);
     }
 

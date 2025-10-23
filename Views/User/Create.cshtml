@@ -3,6 +3,7 @@
 <h2>Create New User</h2>
 
 <form asp-action="Create">
+    <div asp-validation-summary="All" class="text-danger"></div> <!-- does not feel necessary but kept for inclusive design purposes -->
     <div class="form-group">
         <label asp-for="Name"></label><span class="text-danger">*</span>
         <input asp-for="Name" class="form-control" />
