@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace app_ointment_backend.DAL;
 
-public class UserDbContext : IdentityDbContext
+public class UserDbContext : IdentityDbContext<ApplicationUser>
 {
 	public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
 	{

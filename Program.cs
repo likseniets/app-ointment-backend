@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using app_ointment_backend.DAL;
 using Microsoft.AspNetCore.Identity;
+using app_ointment_backend.Models;
+using app_ointment_backend.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,10 +18,11 @@ builder.Services.AddDbContext<UserDbContext>(options =>
         builder.Configuration.GetConnectionString("UserDbContextConnection"));
 });
 
-// FIKSET: Endret fra User til IdentityUser for å bruke ASP.NET Core Identity
-builder.Services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<UserDbContext>();
+// FIKSET: Endret fra IdentityUser til ApplicationUser for å bruke custom brukerfelter
+builder.Services.AddDefaultIdentity<ApplicationUser>().AddEntityFrameworkStores<UserDbContext>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<UserMigrationService>();
 
 // FIKSET: Lagt til RazorPages og Session for Identity-støtte
 builder.Services.AddRazorPages();
@@ -32,6 +35,13 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
     DBInit.Seed(app);
+    
+    // Migrer eksisterende brukere til Identity-systemet
+    using (var scope = app.Services.CreateScope())
+    {
+        var migrationService = scope.ServiceProvider.GetRequiredService<UserMigrationService>();
+        await migrationService.MigrateExistingUsersAsync();
+    }
 }
 
 app.UseHttpsRedirection();
