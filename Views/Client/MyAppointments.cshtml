@@ -1,0 +1,60 @@
+@model IEnumerable<app_ointment_backend.Models.Appointment>
+
+@{
+    ViewData["Title"] = "My Appointments";
+}
+
+<h2>My Appointments</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["Success"]
+    </div>
+}
+
+@if (Model.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Caregiver</th>
+                    <th>Location</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var appointment in Model)
+                {
+                    <tr>
+                        <td>@appointment.Date.ToString("dddd, MMMM dd, yyyy")</td>
+                        <td>@appointment.Date.ToString("HH:mm")</td>
+                        <td>@appointment.Caregiver?.Name</td>
+                        <td>@appointment.Location</td>
+                        <td>
+                            <a asp-controller="Appointment" asp-action="Details" asp-route-id="@appointment.AppointmentId" 
+                               class="btn btn-info btn-sm">View Details</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <h4>No Appointments</h4>
+        <p>You don't have any appointments booked yet.</p>
+        <a asp-action="Index" class="btn btn-primary">Book an Appointment</a>
+    </div>
+}
+
+<div class="mt-4">
+    <a asp-action="Index" class="btn btn-primary">Book New Appointment</a>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Back to Home</a>
+</div>
+

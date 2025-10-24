@@ -43,11 +43,50 @@ public class UserRepository : IUserRepository
         
     }
 
+    /// <summary>
+    /// ENDRET: CreateUser - Opprettet riktig brukertype basert på rolle
+    /// Før: Opprettet bare vanlige User-objekter
+    /// Nå: Oppretter Caregiver, Client eller User basert på valgt rolle
+    /// </summary>
     public async Task<bool> CreateUser(User user)
     {
         try
         {
-            _context.Users.Add(user);
+            // LAGT TIL: Opprett riktig type basert på rolle
+            switch (user.Role)
+            {
+                case UserRole.Caregiver:
+                    var caregiver = new Caregiver
+                    {
+                        Name = user.Name,
+                        Role = user.Role,
+                        Adress = user.Adress,
+                        Phone = user.Phone,
+                        Email = user.Email,
+                        ImageUrl = user.ImageUrl
+                    };
+                    _context.Caregivers.Add(caregiver);
+                    break;
+                    
+                case UserRole.Client:
+                    var client = new Client
+                    {
+                        Name = user.Name,
+                        Role = user.Role,
+                        Adress = user.Adress,
+                        Phone = user.Phone,
+                        Email = user.Email,
+                        ImageUrl = user.ImageUrl
+                    };
+                    _context.Clients.Add(client);
+                    break;
+                    
+                default:
+                    // Admin eller andre roller - bruk vanlig User
+                    _context.Users.Add(user);
+                    break;
+            }
+            
             await _context.SaveChangesAsync();
             return true;
         }

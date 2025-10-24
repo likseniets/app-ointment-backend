@@ -47,6 +47,16 @@ public static class DBInit
                     Email = "s371414@oslomet.no",
                     Phone = "99884432",
                     ImageUrl = "/images/eskil.jpg"
+                },
+                // LAGT TIL: TestClient for å teste booking-funksjonalitet
+                new Client
+                {
+                    Name = "TestClient",
+                    Role = UserRole.Client,
+                    Adress = "Test Address",
+                    Email = "test@test.com",
+                    Phone = "12345678",
+                    ImageUrl = "/images/kjos.jpg"
                 }
             };
 
