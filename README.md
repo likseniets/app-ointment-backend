@@ -8,7 +8,8 @@ The MVP is based on a Admin point of view, who has access to both caregiver and 
 ### Node.js verion:
 The Node.js version for this project is 22.18.0
 
-# Note  
+## Note  
 We have attempted to implement a working login system with username and password (authentication and authorization), but this feature is not yet fully functional and will be completed before the final report.
+
 
 
