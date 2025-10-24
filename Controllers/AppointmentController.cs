@@ -48,8 +48,29 @@ public class AppointmentController : Controller
         return View(appointmentsViewModel);
     }
 
+    public async Task<IActionResult> TableById(int clientId)
+    {
+        var appointments = await _appointmentRepository.GetClientAppointment(clientId);
+        if (appointments == null)
+        {
+            _logger.LogError("[AppointmentController] Appointment list not found while executing _appointmentRepository.GetClientAppointment()");
+            return NotFound("Appointment list for user not found");
+        }
+
+        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
+        var userId = HttpContext.Session.GetInt32("CurrentUserId");
+        if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client)
+        {
+            appointments = appointments.Where(a => a.ClientId == userId.Value);
+        }
+
+        var appointmentsViewModel = new AppointmentsViewModel(appointments, "Table");
+        ViewBag.ClientId = clientId;
+        return View(appointmentsViewModel);
+    }
+
     [HttpGet]
-    public IActionResult Create()
+    public IActionResult Create(int? clientId)
     {
         var caregivers = _userDbContext.Users
             .Where(u => u.Role == UserRole.Caregiver)
@@ -64,13 +85,20 @@ public class AppointmentController : Controller
         {
             clientsQuery = clientsQuery.Where(u => u.UserId == userId.Value);
         }
+        else if (clientId.HasValue)
+        {
+            // Admin managing a specific client: narrow to that client and remember it for the view
+            clientsQuery = clientsQuery.Where(u => u.UserId == clientId.Value);
+            ViewBag.ForClientId = clientId.Value;
+        }
         var clients = clientsQuery
             .Select(u => new { u.UserId, u.Name })
             .ToList();
         ViewBag.ClientList = new SelectList(clients, "UserId", "Name");
 
-        // For clients: Build a list of 1h available slots across caregivers
-        if (roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Client)
+        // Build a list of 1h available slots across caregivers for clients
+        // and for admins creating on behalf of a client
+        if ((roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Client) || clientId.HasValue)
         {
             ViewBag.AvailableSlots = BuildAvailableSlotSelectList();
         }
@@ -80,7 +108,7 @@ public class AppointmentController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(Appointment appointment)
+    public async Task<IActionResult> Create(Appointment appointment, int? clientId)
     {
         try
         {
@@ -92,6 +120,33 @@ public class AppointmentController : Controller
             {
                 // Clients can only create for themselves and must pick a slot
                 appointment.ClientId = userId.Value;
+                var selectedSlot = Request.Form["SelectedSlot"].ToString();
+                if (!string.IsNullOrEmpty(selectedSlot))
+                {
+                    var parts = selectedSlot.Split('|');
+                    if (parts.Length == 2 && int.TryParse(parts[0], out var parsedCaregiverId) && DateTime.TryParse(parts[1], null, DateTimeStyles.RoundtripKind, out var parsedStart))
+                    {
+                        appointment.CaregiverId = parsedCaregiverId;
+                        appointment.Date = parsedStart;
+                        // Clear any prior model state errors for Date/CaregiverId and re-validate
+                        ModelState.Remove(nameof(Appointment.Date));
+                        ModelState.Remove(nameof(Appointment.CaregiverId));
+                        TryValidateModel(appointment);
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, "Invalid slot selection.");
+                    }
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Please select an available slot.");
+                }
+            }
+            else if (clientId.HasValue)
+            {
+                // Admin creating on behalf of a specific client: mirror client flow
+                appointment.ClientId = clientId.Value;
                 var selectedSlot = Request.Form["SelectedSlot"].ToString();
                 if (!string.IsNullOrEmpty(selectedSlot))
                 {
@@ -179,6 +234,12 @@ public class AppointmentController : Controller
         {
             clientsQuery2 = clientsQuery2.Where(u => u.UserId == userId2.Value);
             ViewBag.AvailableSlots = BuildAvailableSlotSelectList();
+        }
+        else if (clientId.HasValue)
+        {
+            clientsQuery2 = clientsQuery2.Where(u => u.UserId == clientId.Value);
+            ViewBag.AvailableSlots = BuildAvailableSlotSelectList();
+            ViewBag.ForClientId = clientId.Value;
         }
         var clients2 = clientsQuery2
             .Select(u => new { u.UserId, u.Name })

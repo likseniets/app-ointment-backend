@@ -1,0 +1,13 @@
+@model AppointmentsViewModel
+
+<h1>List of Appointments (@ViewBag.CurrentViewName View)</h1>
+
+<partial name = "_AppointmentTable" model="Model.Appointments" />
+
+
+<p>
+    <a class="btn btn-secondary"
+        asp-controller="Appointment"
+        asp-action="Create"
+        asp-route-clientId="@ViewBag.ClientId">Create new Appointment</a>
+</p>

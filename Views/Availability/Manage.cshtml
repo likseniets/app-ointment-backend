@@ -6,6 +6,41 @@
 
 <h2>Manage Availability for @Model.Name</h2>
 
+<div class="row mt-5">
+    <div class="col-md-10">
+        <h3>Booked Appointments</h3>
+        @{
+            var appts = ViewBag.CaregiverAppointments as IEnumerable<Appointment>;
+        }
+        @if (appts != null && appts.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Client</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in appts)
+                    {
+                        <tr>
+                            <td>@a.Date.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@(a.Client?.Name ?? "-")</td>
+                            <td>@a.Location</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted">No booked appointments yet.</p>
+        }
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-10">
         <h3>Current Availability</h3>
@@ -100,40 +135,7 @@
     </div>
 </div>
 
-<div class="row mt-5">
-    <div class="col-md-10">
-        <h3>Booked Appointments</h3>
-        @{
-            var appts = ViewBag.CaregiverAppointments as IEnumerable<Appointment>;
-        }
-        @if (appts != null && appts.Any())
-        {
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Date & Time</th>
-                        <th>Client</th>
-                        <th>Location</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var a in appts)
-                    {
-                        <tr>
-                            <td>@a.Date.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td>@(a.Client?.Name ?? "-")</td>
-                            <td>@a.Location</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-        else
-        {
-            <p class="text-muted">No booked appointments yet.</p>
-        }
-    </div>
-</div>
+
 
 <div class="mt-4">
     <a asp-controller="User" asp-action="Table" class="btn btn-secondary">Back to Users</a>

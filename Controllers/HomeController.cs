@@ -39,7 +39,7 @@ namespace app_ointment_backend.Controllers
 
             return user.Role switch
             {
-                UserRole.Client => RedirectToAction("Table", "Appointment"),
+                UserRole.Client => RedirectToAction("TableById", "Appointment", new {clientId = user.UserId}), 
                 UserRole.Caregiver => RedirectToAction("Manage", "Availability", new { caregiverId = user.UserId }),
                 UserRole.Admin => RedirectToAction("Table", "User"),
                 _ => RedirectToAction("Index")

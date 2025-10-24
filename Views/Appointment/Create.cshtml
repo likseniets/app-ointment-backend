@@ -3,59 +3,35 @@
 
 @{
     var roleInt = Context.Session.GetInt32("CurrentUserRole");
-    var isClient = roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Client;
+    //var isClient = roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Client;
 }
 
 <h2>Create New Appointment</h2>
 
-<form asp-action="Create" method="post">
+<form asp-action="Create" method="post" asp-route-clientId="@ViewBag.ForClientId">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="All" class="text-danger"></div>
 
-    @if (isClient)
-    {
-        <div class="form-group">
-            <label for="SelectedSlot">Select an available 1h slot</label><span class="text-danger">*</span>
-            <select id="SelectedSlot" name="SelectedSlot" class="form-control">
-                <option value="">-- Select a time slot --</option>
-                @if (ViewBag.AvailableSlots != null)
-                {
-                    foreach (var item in (IEnumerable<SelectListItem>)ViewBag.AvailableSlots)
-                    {
-                        <option value="@item.Value">@item.Text</option>
-                    }
-                }
-            </select>
-        </div>
-    }
-    else
-    {
-        <div class="form-group">
-            <label for="CaregiverId">Select caregiver</label><span class="text-danger">*</span>
-            <select asp-for="CaregiverId" class="form-control" asp-items="ViewBag.CaregiverList">
-                <option value="">-- Select caregiver --</option>
-            </select>
-            <span asp-validation-for="CaregiverId" class="text-danger"></span>
-        </div>
-        <div class="form-group">
-            <label for="Date">Select Date & Time:</label>
-            <input asp-for="Date" class="form-control" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" />
-            <span asp-validation-for="Date" class="text-danger"></span>
-        </div>
-        <div class="form-group">
-            <label for="ClientId">Select client</label>
-            <select asp-for="ClientId" class="form-control" asp-items="ViewBag.ClientList">
-                <option value="">-- Select client --</option>
-            </select>
-            <span asp-validation-for="ClientId" class="text-danger"></span>
-        </div>
-    }
 
-    <div class="form-group">
-        <label asp-for="Location">Location</label>
-        <input asp-for="Location" class="form-control" />
-        <span asp-validation-for="Location" class="text-danger"></span>
-    </div>
-    <button type="submit" class="btn btn-primary">Create</button>
-    <a asp-action="Table" class="btn btn-secondary">Back to Table View</a>
+<div class="form-group">
+    <label for="SelectedSlot">Select an available 1h slot</label><span class="text-danger">*</span>
+    <select id="SelectedSlot" name="SelectedSlot" class="form-control">
+        <option value="">-- Select a time slot --</option>
+        @if (ViewBag.AvailableSlots != null)
+        {
+            foreach (var item in (IEnumerable<SelectListItem>)ViewBag.AvailableSlots)
+            {
+                <option value="@item.Value">@item.Text</option>
+            }
+        }
+    </select>
+</div>
+    
+<div class="form-group">
+    <label asp-for="Location">Location</label>
+    <input asp-for="Location" class="form-control" />
+    <span asp-validation-for="Location" class="text-danger"></span>
+</div>
+<button type="submit" class="btn btn-primary">Create</button>
+<a asp-action="TableById" asp-route-clientId="@ViewBag.ForClientId" class="btn btn-secondary">Back to Table View</a>
 </form>

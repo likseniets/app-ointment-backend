@@ -15,9 +15,14 @@
         <span asp-validation-for="Adress" class="text-danger"></span>
     </div>
     <div class="form-group">
-        <label asp-for="Role"></label>
-        <input asp-for="Role" class="form-control" />
-        <span asp-validation-for="Role" class="text-danger"></span>
+        <label asp-for="Role"></label><span class="text-danger"></span>
+        <select asp-for="Role" class="form-control" required>
+            <option value="">--Select Role--</option>
+            <option value="0">Admin</option>
+            <option value="1">Caregiver</option>
+            <option value="2">Client</option>
+        </select>
+        <span asp-asp-validation-for="Role" class="text-danger"></span>
     </div>
     <div class="form-group">
         <label asp-for="Phone"></label>
