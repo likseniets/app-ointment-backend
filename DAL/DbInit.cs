@@ -14,8 +14,8 @@ public static class DBInit
         var context = serviceScope.ServiceProvider.GetRequiredService<UserDbContext>();
 
         // Only used for development
-        context.Database.EnsureDeleted(); // This will delete the existing database
-        context.Database.EnsureCreated(); // This will create a new database with all required tables
+        // context.Database.EnsureDeleted(); // This will delete the existing database
+        // context.Database.EnsureCreated(); // This will create a new database with all required tables
 
         if (!context.Users.Any())
         {

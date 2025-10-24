@@ -6,6 +6,7 @@
     var currentUserId = Context.Session.GetInt32("CurrentUserId");
     var isAdmin = roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Admin;
     var isClient = roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Client;
+    var isCaregiver = roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Caregiver;
 }
 
 <div class="container">
@@ -38,9 +39,12 @@
         }
     
     </table>
-    <p>
-        <a class="btn btn-secondary"
-            asp-controller="Appointment"
-            asp-action="Create">Create new Appointment</a>
-    </p>
+    @if (!isCaregiver)
+    {
+        <p>
+            <a class="btn btn-secondary"
+               asp-controller="Appointment"
+               asp-action="Create">Create new Appointment</a>
+        </p>
+    }
 </div>

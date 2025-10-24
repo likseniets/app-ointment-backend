@@ -40,10 +40,11 @@
                                 </select>
                             </td>
                             <td>
-                                <form asp-action="Delete" method="post" onsubmit="document.getElementById('@groupId-hidden').value=document.getElementById('@groupId-select').value; return confirm('Delete selected slot?');">
+                                <form asp-action="Delete" method="post" class="d-inline" onsubmit="document.getElementById('@groupId-hidden').value=document.getElementById('@groupId-select').value; return confirm('Delete selected slot?');">
                                     <input type="hidden" name="id" id="@groupId-hidden" value="@firstId" />
-                                    <button type="submit" class="btn btn-danger btn-sm">Delete Selected Slot</button>
+                                    <button type="submit" class="btn btn-danger btn-sm me-2">Delete</button>
                                 </form>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.location='@Url.Action("Update","Availability")/' + document.getElementById('@groupId-select').value">Edit</button>
                             </td>
                         </tr>
                     }

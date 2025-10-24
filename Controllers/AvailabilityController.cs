@@ -283,4 +283,76 @@ public class AvailabilityController : Controller
             return BadRequest("Failed to delete availability");
         }
     }
+
+    [HttpGet]
+    public async Task<IActionResult> Update(int id)
+    {
+        var availability = await _userDbContext.Availabilities.FindAsync(id);
+        if (availability == null)
+        {
+            return NotFound();
+        }
+
+        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
+        var userId = HttpContext.Session.GetInt32("CurrentUserId");
+        if (roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Caregiver && userId.HasValue && availability.CaregiverId != userId.Value)
+        {
+            return Forbid();
+        }
+
+        return View(availability);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update([Bind("AvailabilityId,Date,StartTime,CaregiverId,Description")] Availability model)
+    {
+        var availability = await _userDbContext.Availabilities.FindAsync(model.AvailabilityId);
+        if (availability == null)
+        {
+            return NotFound();
+        }
+
+        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
+        var userId = HttpContext.Session.GetInt32("CurrentUserId");
+        if (roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Caregiver && userId.HasValue && availability.CaregiverId != userId.Value)
+        {
+            return Forbid();
+        }
+
+        if (!TimeSpan.TryParse(model.StartTime, out var startTs))
+        {
+            ModelState.AddModelError("StartTime", "Invalid time format. Use HH:mm");
+        }
+        if (startTs.Minutes != 0)
+        {
+            ModelState.AddModelError("StartTime", "Start must be on the hour");
+        }
+        var endTs = startTs.Add(TimeSpan.FromHours(1));
+
+        bool conflict = await _userDbContext.Availabilities.AnyAsync(a => a.AvailabilityId != availability.AvailabilityId && a.CaregiverId == availability.CaregiverId && a.Date.Date == model.Date.Date && a.StartTime == new TimeSpan(startTs.Hours, 0, 0).ToString(@"hh\:mm") && a.EndTime == new TimeSpan(endTs.Hours, 0, 0).ToString(@"hh\:mm"));
+        if (conflict)
+        {
+            ModelState.AddModelError(string.Empty, "A slot at that time already exists");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        availability.Date = model.Date.Date;
+        availability.StartTime = new TimeSpan(startTs.Hours, 0, 0).ToString(@"hh\:mm");
+        availability.EndTime = new TimeSpan(endTs.Hours, 0, 0).ToString(@"hh\:mm");
+        availability.Description = model.Description;
+
+        var ok = await _availabilityRepository.UpdateAvailability(availability);
+        if (!ok)
+        {
+            ModelState.AddModelError(string.Empty, "Failed to update availability");
+            return View(model);
+        }
+
+        return RedirectToAction(nameof(Manage), new { caregiverId = availability.CaregiverId });
+    }
 }

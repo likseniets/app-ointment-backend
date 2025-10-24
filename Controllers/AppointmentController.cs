@@ -313,6 +313,31 @@ public class AppointmentController : Controller
             _logger.LogError("[AppointmentController] Appointment deletion failed for the Id {AppointmentId:0000}", id);
             return BadRequest("Appointment deletion failed");
         }
+
+        // Re-open the corresponding availability slot (best-effort)
+        try
+        {
+            var start = existing.Date;
+            var end = start.AddHours(1);
+            string startStr = start.ToString("HH:mm");
+            string endStr = end.ToString("HH:mm");
+
+            bool exists = await _userDbContext.Availabilities.AnyAsync(a => a.CaregiverId == existing.CaregiverId && a.Date.Date == start.Date && a.StartTime == startStr && a.EndTime == endStr);
+            if (!exists)
+            {
+                var newSlot = new Availability
+                {
+                    CaregiverId = existing.CaregiverId,
+                    Date = start.Date,
+                    StartTime = startStr,
+                    EndTime = endStr,
+                    Description = "Reopened from appointment cancellation"
+                };
+                await _availabilityRepository.CreateAvailability(newSlot);
+            }
+        }
+        catch { /* ignore slot recreation failures */ }
+
         return RedirectToAction(nameof(Table));
     }
 
