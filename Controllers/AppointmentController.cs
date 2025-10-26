@@ -249,7 +249,7 @@ public class AppointmentController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Update(int id)
+    public async Task<IActionResult> Update(int id, bool returnToManage = false, int? caregiverId = null)
     {
         var appointment = await _appointmentRepository.GetAppointmentById(id);
         if (appointment == null)
@@ -275,12 +275,14 @@ public class AppointmentController : Controller
             .Select(u => new { u.UserId, u.Name })
             .ToList();
         ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId);
+        ViewBag.ReturnToManage = returnToManage;
+        ViewBag.ManageCaregiverId = caregiverId;
         return View(appointment);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update([Bind("AppointmentId,Date,CaregiverId,ClientId,Location")] Appointment appointment)
+    public async Task<IActionResult> Update([Bind("AppointmentId,Date,CaregiverId,ClientId,Location")] Appointment appointment, bool returnToManage = false, int? caregiverId = null)
     {
         if (ModelState.IsValid)
         {
@@ -308,7 +310,13 @@ public class AppointmentController : Controller
 
                 bool returnOk = await _appointmentRepository.UpdateAppointment(appointment);
                 if (returnOk)
+                {
+                    if (returnToManage && caregiverId.HasValue)
+                    {
+                        return RedirectToAction("Manage", "Availability", new { caregiverId = caregiverId.Value });
+                    }
                     return RedirectToAction(nameof(Table));
+                }
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -332,11 +340,13 @@ public class AppointmentController : Controller
             .Select(u => new { u.UserId, u.Name })
             .ToList();
         ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId);
+        ViewBag.ReturnToManage = returnToManage;
+        ViewBag.ManageCaregiverId = caregiverId;
         return View(appointment);
     }
 
     [HttpGet]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, bool returnToManage = false, int? caregiverId = null)
     {
         var appointment = await _appointmentRepository.GetAppointmentById(id);
         if (appointment == null)
@@ -350,12 +360,14 @@ public class AppointmentController : Controller
         {
             return Forbid();
         }
+        ViewBag.ReturnToManage = returnToManage;
+        ViewBag.ManageCaregiverId = caregiverId;
         return View(appointment);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
+    public async Task<IActionResult> DeleteConfirmed(int id, bool returnToManage = false, int? caregiverId = null)
     {
         var existing = await _appointmentRepository.GetAppointmentById(id);
         if (existing == null)
@@ -398,6 +410,12 @@ public class AppointmentController : Controller
             }
         }
         catch { /* ignore slot recreation failures */ }
+
+        if (returnToManage && (caregiverId.HasValue || existing != null))
+        {
+            var caregiverToUse = caregiverId ?? existing.CaregiverId;
+            return RedirectToAction("Manage", "Availability", new { caregiverId = caregiverToUse });
+        }
 
         return RedirectToAction(nameof(Table));
     }

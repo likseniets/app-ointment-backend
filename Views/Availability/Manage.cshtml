@@ -20,6 +20,7 @@
                         <th>Date & Time</th>
                         <th>Client</th>
                         <th>Location</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -29,6 +30,14 @@
                             <td>@a.Date.ToString("yyyy-MM-dd HH:mm")</td>
                             <td>@(a.Client?.Name ?? "-")</td>
                             <td>@a.Location</td>
+                            <td>
+                                <form asp-controller="Appointment" asp-action="DeleteConfirmed" asp-route-id="@a.AppointmentId" method="post" class="d-inline" onsubmit="return confirm('Cancel this appointment?');">
+                                    <input type="hidden" name="returnToManage" value="true" />
+                                    <input type="hidden" name="caregiverId" value="@Model.UserId" />
+                                    <button type="submit" class="btn btn-danger btn-sm me-2">Delete</button>
+                                </form>
+                                <a class="btn btn-outline-primary btn-sm" asp-controller="Appointment" asp-action="Update" asp-route-id="@a.AppointmentId" asp-route-returnToManage="true" asp-route-caregiverId="@Model.UserId">Edit</a>
+                            </td>
                         </tr>
                     }
                 </tbody>

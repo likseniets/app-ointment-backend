@@ -21,7 +21,9 @@
         </tr>
         @foreach (var appointment in Model)
         {
-            var canEdit = isAdmin || (isClient && currentUserId.HasValue && appointment.ClientId == currentUserId.Value);
+            var canEdit = isAdmin 
+                || (isClient && currentUserId.HasValue && appointment.ClientId == currentUserId.Value)
+                || (isCaregiver && currentUserId.HasValue && appointment.CaregiverId == currentUserId.Value);
             <tr>
                 <td>@appointment.AppointmentId</td>
                 <td>@(appointment.Client?.Name ?? "-")</td>
