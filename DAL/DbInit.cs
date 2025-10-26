@@ -14,8 +14,8 @@ public static class DBInit
         var context = serviceScope.ServiceProvider.GetRequiredService<UserDbContext>();
 
         // Only used for development
-        // context.Database.EnsureDeleted(); // This will delete the existing database
-        // context.Database.EnsureCreated(); // This will create a new database with all required tables
+        //context.Database.EnsureDeleted(); // This will delete the existing database
+        //context.Database.EnsureCreated(); // This will create a new database with all required tables
 
         if (!context.Users.Any())
         {
@@ -40,6 +40,15 @@ public static class DBInit
                     ImageUrl = "/images/jeppe.jpg"
                 },
                 new Caregiver
+                {
+                    Name = "Kjos",
+                    Role = UserRole.Caregiver,
+                    Adress = "Gingertown",
+                    Email = "s371393@oslomet.no",
+                    Phone = "82888222",
+                    ImageUrl = "/images/kjos.jpg"
+                },
+                new Client
                 {
                     Name = "Eskil",
                     Role = UserRole.Client,

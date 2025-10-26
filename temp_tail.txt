@@ -1,0 +1,57 @@
+                var newSlot = new Availability
+                {
+                    CaregiverId = existing.CaregiverId,
+                    Date = start.Date,
+                    StartTime = startStr,
+                    EndTime = endStr,
+                    Description = "Reopened from appointment cancellation"
+                };
+                await _availabilityRepository.CreateAvailability(newSlot);
+            }
+        }
+        catch { /* ignore slot recreation failures */ }
+
+        if (returnToManage && (caregiverId.HasValue || existing != null))
+        {
+            var caregiverToUse = caregiverId ?? existing.CaregiverId;
+            return RedirectToAction("Manage", "Availability", new { caregiverId = caregiverToUse });
+        }
+
+        return RedirectToAction(nameof(Table));
+    }
+
+    // Build a select list of available 1-hour slots across all caregivers
+    private List<SelectListItem> BuildAvailableSlotSelectList()
+    {
+        var now = DateTime.Now;
+        var slots = new List<(int CaregiverId, string CaregiverName, DateTime Start)>();
+        var availabilities = _userDbContext.Availabilities
+            .Include(a => a.Caregiver)
+            .AsNoTracking()
+            .ToList();
+
+        foreach (var a in availabilities)
+        {
+            if (!TimeSpan.TryParse(a.StartTime, out var startTs) || !TimeSpan.TryParse(a.EndTime, out var endTs))
+                continue;
+            for (var t = startTs; t + TimeSpan.FromHours(1) <= endTs; t = t + TimeSpan.FromHours(1))
+            {
+                var slotStart = a.Date.Date + t;
+                if (slotStart < now) continue;
+                bool booked = _userDbContext.Appointments.Any(ap => ap.CaregiverId == a.CaregiverId && ap.Date == slotStart);
+                if (booked) continue;
+                slots.Add((a.CaregiverId, a.Caregiver?.Name ?? $"Caregiver #{a.CaregiverId}", slotStart));
+            }
+        }
+
+        var items = slots
+            .OrderBy(s => s.Start)
+            .Select(s => new SelectListItem
+            {
+                Value = $"{s.CaregiverId}|{s.Start:O}",
+                Text = $"{s.Start:yyyy-MM-dd HH:mm} - {s.Start.AddHours(1):HH:mm} — {s.CaregiverName}"
+            })
+            .ToList();
+        return items;
+    }
+}
