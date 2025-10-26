@@ -15,7 +15,7 @@ public static class DBInit
 
         // Only used for development
         // context.Database.EnsureDeleted(); // This will delete the existing database
-        // context.Database.EnsureCreated(); // This will create a new database with all required tables
+        context.Database.EnsureCreated(); // This will create a new database with all required tables
 
         if (!context.Users.Any())
         {
