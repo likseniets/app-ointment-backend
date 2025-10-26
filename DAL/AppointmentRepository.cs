@@ -30,6 +30,25 @@ public class AppointmentRepository : IAppointmentRepository
             _logger.LogError("[AppointmentRepository] appointments query failed when GetAll(), error message: {e}", e.Message);
             return null;
         }
+
+    }
+    
+    public async Task<IEnumerable<Appointment>?> GetClientAppointment(int id)
+    {
+        try
+        {
+            return await _context.Appointments
+                .Include(a => a.Client)
+                .Include(a => a.Caregiver)
+                .Where(a => a.ClientId == id)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[AppointmentRepository] appointments query failed when GetAll(), error message: {e}", e.Message);
+            return null;
+        }
         
     }
 

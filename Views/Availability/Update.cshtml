@@ -1,0 +1,36 @@
+@model app_ointment_backend.Models.Availability
+
+@{
+    ViewData["Title"] = "Update Availability";
+}
+
+<h2>Update Availability</h2>
+
+<form asp-action="Update" method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="AvailabilityId" />
+    <input type="hidden" asp-for="CaregiverId" />
+
+    <div class="form-group">
+        <label asp-for="Date">Date</label>
+        <input asp-for="Date" class="form-control" type="date" />
+        <span asp-validation-for="Date" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="StartTime">Start Time</label>
+        <input asp-for="StartTime" class="form-control" type="time" step="3600" />
+        <span asp-validation-for="StartTime" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Description">Description</label>
+        <input asp-for="Description" class="form-control" />
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Manage" asp-route-caregiverId="@Model.CaregiverId" class="btn btn-secondary">Cancel</a>
+</form>
+

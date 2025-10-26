@@ -47,7 +47,13 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            _context.Users.Add(user);
+            var entity = user.Role switch
+            {
+                UserRole.Caregiver => new Caregiver { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role },
+                UserRole.Client => new Client { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role },
+                _ => user
+            };
+            _context.Add(entity);
             await _context.SaveChangesAsync();
             return true;
         }

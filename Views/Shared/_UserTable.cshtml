@@ -25,6 +25,9 @@
                     {
                         <span> | </span>
                         <a asp-controller="Availability" asp-action="Manage" asp-route-caregiverId="@user.UserId">Manage Availability</a>
+                    } else if (user.Role == UserRole.Client) {
+                        <span> | </span>
+                        <a asp-controller="Appointment" asp-action="TableById" asp-route-clientId="@user.UserId">Manage Appointments</a>
                     }
                 </td>
             </tr>

@@ -16,7 +16,19 @@
 
     <form asp-action="DeleteConfirmed" asp-route-id="@Model.AppointmentId" method="post">
         @Html.AntiForgeryToken()
+        @if (ViewBag.ReturnToManage == true)
+        {
+            <input type="hidden" name="returnToManage" value="true" />
+            <input type="hidden" name="caregiverId" value="@ViewBag.ManageCaregiverId" />
+        }
         <button type="submit" class="btn btn-danger">Cancel appointment</button>
-        <a asp-action="Table" class="btn btn-secondary">Go back</a>
+        @if (ViewBag.ReturnToManage == true)
+        {
+            <a asp-controller="Availability" asp-action="Manage" asp-route-caregiverId="@ViewBag.ManageCaregiverId" class="btn btn-secondary">Go back</a>
+        }
+        else
+        {
+            <a asp-action="Table" class="btn btn-secondary">Go back</a>
+        }
     </form>
 </div>
