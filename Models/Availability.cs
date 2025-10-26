@@ -21,7 +21,5 @@ public class Availability
     [Required]
     public int CaregiverId { get; set; }
 
-    public string Description { get; set; } = string.Empty;
-
     public virtual Caregiver Caregiver { get; set; } = default!;
 }

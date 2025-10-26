@@ -282,7 +282,7 @@ public class AppointmentController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update([Bind("AppointmentId,Date,CaregiverId,ClientId,Location")] Appointment appointment, bool returnToManage = false, int? caregiverId = null)
+    public async Task<IActionResult> Update([Bind("AppointmentId,Date,CaregiverId,ClientId,Location,Description")] Appointment appointment, bool returnToManage = false, int? caregiverId = null)
     {
         if (ModelState.IsValid)
         {
@@ -307,8 +307,8 @@ public class AppointmentController : Controller
                 existing.CaregiverId = appointment.CaregiverId;
                 existing.ClientId = appointment.ClientId; // kept from hidden field
                 existing.Location = appointment.Location;
-
-                bool returnOk = await _appointmentRepository.UpdateAppointment(appointment);
+                existing.Description = appointment.Description;
+                bool returnOk = await _appointmentRepository.UpdateAppointment(existing);
                 if (returnOk)
                 {
                     if (returnToManage && caregiverId.HasValue)
@@ -403,8 +403,7 @@ public class AppointmentController : Controller
                     CaregiverId = existing.CaregiverId,
                     Date = start.Date,
                     StartTime = startStr,
-                    EndTime = endStr,
-                    Description = "Reopened from appointment cancellation"
+                    EndTime = endStr
                 };
                 await _availabilityRepository.CreateAvailability(newSlot);
             }

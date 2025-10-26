@@ -16,6 +16,7 @@ public class Appointment
     [ValidateNever]
     public virtual User Client { get; set; } = default!;
     public required string Location { get; set; }
+    public string Description { get; set; } = string.Empty;
 
 
     // validate the date input for making appointments

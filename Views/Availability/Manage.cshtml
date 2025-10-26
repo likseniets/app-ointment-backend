@@ -20,6 +20,7 @@
                         <th>Date & Time</th>
                         <th>Client</th>
                         <th>Location</th>
+                        <th>Description</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -30,6 +31,7 @@
                             <td>@a.Date.ToString("yyyy-MM-dd HH:mm")</td>
                             <td>@(a.Client?.Name ?? "-")</td>
                             <td>@a.Location</td>
+                            <td>@a.Description</td>
                             <td>
                                 <form asp-controller="Appointment" asp-action="DeleteConfirmed" asp-route-id="@a.AppointmentId" method="post" class="d-inline" onsubmit="return confirm('Cancel this appointment?');">
                                     <input type="hidden" name="returnToManage" value="true" />
@@ -134,10 +136,7 @@
                 <input type="time" id="endTime" name="endTime" class="form-control" step="3600" required />
             </div>
 
-            <div class="form-group">
-                <label for="description">Description</label>
-                <input type="text" id="description" name="description" class="form-control" />
-            </div>
+            
 
             <button type="submit" class="btn btn-primary mt-3">Add Availability</button>
         </form>

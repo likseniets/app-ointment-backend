@@ -14,8 +14,8 @@ public static class DBInit
         var context = serviceScope.ServiceProvider.GetRequiredService<UserDbContext>();
 
         // Only used for development
-        //context.Database.EnsureDeleted(); // This will delete the existing database
-        //context.Database.EnsureCreated(); // This will create a new database with all required tables
+        context.Database.EnsureDeleted(); // This will delete the existing database
+        context.Database.EnsureCreated(); // This will create a new database with all required tables
 
         if (!context.Users.Any())
         {
@@ -87,7 +87,8 @@ public static class DBInit
                     Date = DateTime.Now,
                     ClientId = client.UserId,
                     CaregiverId = caregiver.UserId,
-                    Location = "Home"
+                    Location = "Home",
+                    Description = "Initial appointment"
                 };
 
                 // Insert appointment directly so it's immediately available

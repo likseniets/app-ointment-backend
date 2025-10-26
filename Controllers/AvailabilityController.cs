@@ -127,8 +127,7 @@ public class AvailabilityController : Controller
                         CaregiverId = availability.CaregiverId,
                         Date = availability.Date.Date,
                         StartTime = slotStart,
-                        EndTime = slotEnd,
-                        Description = availability.Description
+                        EndTime = slotEnd
                     };
                     await _availabilityRepository.CreateAvailability(slot);
                     created++;
@@ -152,19 +151,18 @@ public class AvailabilityController : Controller
     // POST: Availability/CreateInline
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateInline([FromForm] int caregiverId, [FromForm] DateTime date, [FromForm] string startTime, [FromForm] string endTime, [FromForm] string description)
+    public async Task<IActionResult> CreateInline([FromForm] int caregiverId, [FromForm] DateTime date, [FromForm] string startTime, [FromForm] string endTime)
     {
         // Debug logging to see what we're receiving
-        _logger.LogInformation("[AvailabilityController] Received availability: Day={Day}, Start={Start}, End={End}, CaregiverId={Id}, Description={Description}",
-            date, startTime, endTime, caregiverId, description);
+        _logger.LogInformation("[AvailabilityController] Received availability: Day={Day}, Start={Start}, End={End}, CaregiverId={Id}",
+            date, startTime, endTime, caregiverId);
 
         var availability = new Availability
         {
             CaregiverId = caregiverId,
             Date = date,
             StartTime = startTime,
-            EndTime = endTime,
-            Description = description
+            EndTime = endTime
         };
 
         // If a caregiver is logged in, enforce self-only
@@ -226,8 +224,7 @@ public class AvailabilityController : Controller
                     CaregiverId = availability.CaregiverId,
                     Date = availability.Date.Date,
                     StartTime = slotStart,
-                    EndTime = slotEnd,
-                    Description = availability.Description
+                    EndTime = slotEnd
                 };
                 await _availabilityRepository.CreateAvailability(slot);
                 created++;
@@ -305,7 +302,7 @@ public class AvailabilityController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update([Bind("AvailabilityId,Date,StartTime,CaregiverId,Description")] Availability model)
+    public async Task<IActionResult> Update([Bind("AvailabilityId,Date,StartTime,CaregiverId")] Availability model)
     {
         var availability = await _userDbContext.Availabilities.FindAsync(model.AvailabilityId);
         if (availability == null)
@@ -344,7 +341,6 @@ public class AvailabilityController : Controller
         availability.Date = model.Date.Date;
         availability.StartTime = new TimeSpan(startTs.Hours, 0, 0).ToString(@"hh\:mm");
         availability.EndTime = new TimeSpan(endTs.Hours, 0, 0).ToString(@"hh\:mm");
-        availability.Description = model.Description;
 
         var ok = await _availabilityRepository.UpdateAvailability(availability);
         if (!ok)
