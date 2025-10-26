@@ -375,4 +375,196 @@ public class AppointmentController : Controller
             .ToList();
         return items;
     }
+
+    // GET: Appointment/ManageForClient/{clientId}
+    [HttpGet]
+    public async Task<IActionResult> ManageForClient(int clientId)
+    {
+        // Verify that client exists
+        var client = await _userDbContext.Users
+            .FirstOrDefaultAsync(u => u.UserId == clientId && u.Role == UserRole.Client);
+        
+        if (client == null)
+        {
+            _logger.LogError("[AppointmentController] Client not found for Id {ClientId}", clientId);
+            return RedirectToAction("Table", "User");
+        }
+
+        // Get existing appointments for this client
+        var appointments = await _appointmentRepository.GetAll();
+        if (appointments != null)
+        {
+            appointments = appointments.Where(a => a.ClientId == clientId);
+            ViewBag.Appointments = appointments.ToList();
+        }
+        else
+        {
+            ViewBag.Appointments = new List<Appointment>();
+        }
+
+        // Get list of caregivers for dropdown
+        var caregivers = _userDbContext.Users
+            .Where(u => u.Role == UserRole.Caregiver)
+            .Select(u => new { u.UserId, u.Name })
+            .ToList();
+        ViewBag.CaregiverList = new SelectList(caregivers, "UserId", "Name");
+
+        // Get all available slots for all caregivers
+        var allAvailableSlots = new List<SelectListItem>();
+        foreach (var caregiver in caregivers)
+        {
+            var slots = BuildAvailableSlotsForCaregiver(caregiver.UserId);
+            foreach (var slot in slots)
+            {
+                // Add caregiver name to slot text for clarity
+                slot.Text = $"{slot.Text} ({caregiver.Name})";
+                allAvailableSlots.Add(slot);
+            }
+        }
+        ViewBag.AvailableSlots = allAvailableSlots.OrderBy(s => s.Value).ToList();
+
+        ViewBag.ClientId = clientId;
+        ViewBag.ClientName = client.Name;
+
+        return View();
+    }
+
+    // POST: Appointment/CreateForClient
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateForClient(int clientId, string selectedSlot, string location)
+    {
+        try
+        {
+            // Verify client exists
+            bool clientExists = await _userDbContext.Users.AnyAsync(u => u.UserId == clientId && u.Role == UserRole.Client);
+            if (!clientExists)
+            {
+                TempData["Error"] = "Selected client does not exist.";
+                return RedirectToAction(nameof(ManageForClient), new { clientId });
+            }
+
+            // caregiverId will be parsed from selectedSlot below
+
+            // Parse selected time slot (format: "caregiverId|datetime")
+            if (string.IsNullOrEmpty(selectedSlot))
+            {
+                TempData["Error"] = "Please select a time slot.";
+                return RedirectToAction(nameof(ManageForClient), new { clientId });
+            }
+
+            var parts = selectedSlot.Split('|');
+            if (parts.Length != 2)
+            {
+                TempData["Error"] = "Invalid time slot selected.";
+                return RedirectToAction(nameof(ManageForClient), new { clientId });
+            }
+
+            if (!int.TryParse(parts[0], out var caregiverId))
+            {
+                TempData["Error"] = "Invalid caregiver selected.";
+                return RedirectToAction(nameof(ManageForClient), new { clientId });
+            }
+
+            if (!DateTime.TryParse(parts[1], null, System.Globalization.DateTimeStyles.RoundtripKind, out var appointmentDate))
+            {
+                TempData["Error"] = "Invalid time slot selected.";
+                return RedirectToAction(nameof(ManageForClient), new { clientId });
+            }
+
+            // Check if slot is still available
+            bool alreadyBooked = await _userDbContext.Appointments.AnyAsync(a => 
+                a.CaregiverId == caregiverId && a.Date == appointmentDate);
+            if (alreadyBooked)
+            {
+                TempData["Error"] = "Selected time slot is no longer available. Please choose another.";
+                return RedirectToAction(nameof(ManageForClient), new { clientId });
+            }
+
+            // Create appointment
+            var appointment = new Appointment
+            {
+                ClientId = clientId,
+                CaregiverId = caregiverId,
+                Date = appointmentDate,
+                Location = location ?? string.Empty
+            };
+
+            bool returnOk = await _appointmentRepository.CreateAppointment(appointment);
+            if (returnOk)
+            {
+                // Remove the corresponding availability slot (best-effort)
+                try
+                {
+                    var endDt = appointmentDate.AddHours(1);
+                    string startStr = appointmentDate.ToString("HH:mm");
+                    string endStr = endDt.ToString("HH:mm");
+                    var slot = await _userDbContext.Availabilities
+                        .FirstOrDefaultAsync(a => 
+                            a.CaregiverId == caregiverId && 
+                            a.Date.Date == appointmentDate.Date && 
+                            a.StartTime == startStr && 
+                            a.EndTime == endStr);
+                    if (slot != null)
+                    {
+                        await _availabilityRepository.DeleteAvailability(slot.AvailabilityId);
+                    }
+                }
+                catch { /* ignore best-effort cleanup */ }
+
+                TempData["Success"] = "Appointment created successfully.";
+                return RedirectToAction(nameof(ManageForClient), new { clientId });
+            }
+            else
+            {
+                TempData["Error"] = "Unable to create appointment. Please try again.";
+                return RedirectToAction(nameof(ManageForClient), new { clientId });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("[AppointmentController] Error creating appointment: {Error}", ex.Message);
+            TempData["Error"] = "Unable to create appointment. Please try again.";
+            return RedirectToAction(nameof(ManageForClient), new { clientId });
+        }
+    }
+
+    // Build available slots for a specific caregiver
+    private List<SelectListItem> BuildAvailableSlotsForCaregiver(int caregiverId)
+    {
+        var now = DateTime.Now;
+        var slots = new List<(DateTime Start, string Text)>();
+        var availabilities = _userDbContext.Availabilities
+            .Where(a => a.CaregiverId == caregiverId)
+            .AsNoTracking()
+            .ToList();
+
+        foreach (var a in availabilities)
+        {
+            if (!TimeSpan.TryParse(a.StartTime, out var startTs) || !TimeSpan.TryParse(a.EndTime, out var endTs))
+                continue;
+            
+            for (var t = startTs; t + TimeSpan.FromHours(1) <= endTs; t = t + TimeSpan.FromHours(1))
+            {
+                var slotStart = a.Date.Date + t;
+                if (slotStart < now) continue;
+                
+                bool booked = _userDbContext.Appointments.Any(ap => ap.CaregiverId == caregiverId && ap.Date == slotStart);
+                if (booked) continue;
+                
+                slots.Add((slotStart, $"{slotStart:yyyy-MM-dd HH:mm} - {slotStart.AddHours(1):HH:mm}"));
+            }
+        }
+
+        var items = slots
+            .OrderBy(s => s.Start)
+            .Select(s => new SelectListItem
+            {
+                Value = $"{caregiverId}|{s.Start.ToString("O")}",
+                Text = s.Text
+            })
+            .ToList();
+        
+        return items;
+    }
 }

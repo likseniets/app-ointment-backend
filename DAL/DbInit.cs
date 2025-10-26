@@ -17,7 +17,21 @@ public static class DBInit
         // context.Database.EnsureDeleted(); // This will delete the existing database
         // context.Database.EnsureCreated(); // This will create a new database with all required tables
 
-        if (!context.Users.Any())
+        // Ensure database is created
+        context.Database.EnsureCreated();
+        
+        // Check if users exist with try-catch to handle missing tables
+        bool hasUsers = false;
+        try
+        {
+            hasUsers = context.Users.Count() > 0;
+        }
+        catch
+        {
+            hasUsers = false;
+        }
+        
+        if (!hasUsers)
         {
             var users = new List<User>
             {
@@ -40,6 +54,15 @@ public static class DBInit
                     ImageUrl = "/images/jeppe.jpg"
                 },
                 new Caregiver
+                {
+                    Name = "Nikolai",
+                    Role = UserRole.Caregiver,
+                    Adress = "Oslo",
+                    Email = "nikolai@example.com",
+                    Phone = "12345678",
+                    ImageUrl = "/images/nikolai.jpg"
+                },
+                new Client
                 {
                     Name = "Eskil",
                     Role = UserRole.Client,

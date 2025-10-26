@@ -1,0 +1,78 @@
+@{
+    var clientId = ViewBag.ClientId;
+    var clientName = ViewBag.ClientName;
+    var appointments = (List<Appointment>)ViewBag.Appointments;
+}
+
+<h2>Manage Appointments for @clientName</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<h4>Existing Appointments</h4>
+@if (appointments != null && appointments.Count > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date & Time</th>
+                <th>Caregiver</th>
+                <th>Location</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var apt in appointments)
+            {
+                <tr>
+                    <td>@apt.Date.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@apt.Caregiver?.Name</td>
+                    <td>@apt.Location</td>
+                    <td>
+                        <a asp-action="Update" asp-route-id="@apt.AppointmentId" class="btn btn-warning">Edit</a>
+                        <a asp-action="Delete" asp-route-id="@apt.AppointmentId" class="btn btn-danger">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No appointments found for this client.</p>
+}
+
+<h4>Create New Appointment</h4>
+
+<form method="post" asp-action="CreateForClient">
+    <input type="hidden" name="clientId" value="@clientId" />
+    
+    <div class="form-group">
+        <label for="selectedSlot">Select an available 1h slot</label><span class="text-danger">*</span>
+        <select name="selectedSlot" id="selectedSlot" class="form-control" required>
+            <option value="">-- Select a time slot --</option>
+            @if (ViewBag.AvailableSlots != null)
+            {
+                foreach (var item in (List<SelectListItem>)ViewBag.AvailableSlots)
+                {
+                    <option value="@item.Value">@item.Text</option>
+                }
+            }
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="location">Location</label>
+        <input type="text" name="location" id="location" class="form-control" />
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-controller="User" asp-action="Table" class="btn btn-secondary">Back to Table View</a>
+</form>

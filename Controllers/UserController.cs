@@ -51,7 +51,46 @@ public class UserController : Controller
     {
         if (ModelState.IsValid)
         {
-            bool returnOk = await _userRepository.CreateUser(user);
+            // Create the appropriate user type based on role
+            User userToCreate;
+            switch (user.Role)
+            {
+                case UserRole.Caregiver:
+                    userToCreate = new Caregiver
+                    {
+                        Name = user.Name,
+                        Role = user.Role,
+                        Adress = user.Adress,
+                        Phone = user.Phone,
+                        Email = user.Email,
+                        ImageUrl = user.ImageUrl
+                    };
+                    break;
+                case UserRole.Client:
+                    userToCreate = new Client
+                    {
+                        Name = user.Name,
+                        Role = user.Role,
+                        Adress = user.Adress,
+                        Phone = user.Phone,
+                        Email = user.Email,
+                        ImageUrl = user.ImageUrl
+                    };
+                    break;
+                default:
+                    userToCreate = new User
+                    {
+                        Name = user.Name,
+                        Role = user.Role,
+                        Adress = user.Adress,
+                        Phone = user.Phone,
+                        Email = user.Email,
+                        ImageUrl = user.ImageUrl
+                    };
+                    break;
+            }
+
+            bool returnOk = await _userRepository.CreateUser(userToCreate);
             if (returnOk)
                 return RedirectToAction(nameof(Table));
         }
@@ -77,7 +116,49 @@ public class UserController : Controller
     {
         if (ModelState.IsValid)
         {
-            bool returnOk = await _userRepository.UpdateUser(user);
+            // Create the appropriate user type based on role for update
+            User userToUpdate;
+            switch (user.Role)
+            {
+                case UserRole.Caregiver:
+                    userToUpdate = new Caregiver
+                    {
+                        UserId = user.UserId,
+                        Name = user.Name,
+                        Role = user.Role,
+                        Adress = user.Adress,
+                        Phone = user.Phone,
+                        Email = user.Email,
+                        ImageUrl = user.ImageUrl
+                    };
+                    break;
+                case UserRole.Client:
+                    userToUpdate = new Client
+                    {
+                        UserId = user.UserId,
+                        Name = user.Name,
+                        Role = user.Role,
+                        Adress = user.Adress,
+                        Phone = user.Phone,
+                        Email = user.Email,
+                        ImageUrl = user.ImageUrl
+                    };
+                    break;
+                default:
+                    userToUpdate = new User
+                    {
+                        UserId = user.UserId,
+                        Name = user.Name,
+                        Role = user.Role,
+                        Adress = user.Adress,
+                        Phone = user.Phone,
+                        Email = user.Email,
+                        ImageUrl = user.ImageUrl
+                    };
+                    break;
+            }
+
+            bool returnOk = await _userRepository.UpdateUser(userToUpdate);
             if (returnOk)
                 return RedirectToAction(nameof(Table));
         }
