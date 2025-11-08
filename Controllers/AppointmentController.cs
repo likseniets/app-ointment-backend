@@ -32,7 +32,7 @@ public class AppointmentController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<ActionResult<IEnumerable<Appointment>>> GetAll()
     {
         var appointments = await _appointmentRepository.GetAll();
         if (appointments == null)

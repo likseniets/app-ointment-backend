@@ -20,10 +20,10 @@ public class UserController : Controller
     }
 
     [HttpGet]
-    public IActionResult GetUsers()
+    public Task<IActionResult> GetUsers()
     {
         var users = _userRepository.GetAll();
-        return Ok(users);
+        return Task.FromResult<IActionResult>(Ok(users));
     }
 
     [HttpGet("table")]
@@ -68,7 +68,7 @@ public class UserController : Controller
     {
         return View();
     }
-    
+
     [HttpPost("create/new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(User user)

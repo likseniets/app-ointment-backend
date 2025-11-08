@@ -4,7 +4,7 @@ namespace app_ointment_backend.DAL;
 
 public interface IUserRepository
 {
-    Task<IEnumerable<User>?> GetAll();
+    Task<IEnumerable<User>> GetAll();
     Task<User?> GetUserById(int userId);
     Task<bool> CreateUser(User user);
     Task<bool> UpdateUser(User user);
