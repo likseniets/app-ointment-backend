@@ -14,6 +14,8 @@ using System.Globalization;
 namespace app_ointment_backend.Controllers;
 
 // Controller setup based on course demos
+[ApiController]
+[Route("api/[controller]")]
 public class AppointmentController : Controller
 {
     private readonly UserDbContext _userDbContext;
@@ -28,7 +30,9 @@ public class AppointmentController : Controller
         _availabilityRepository = availabilityRepository;
         _logger = logger;
     }
-    public async Task<IActionResult> Table()
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
     {
         var appointments = await _appointmentRepository.GetAll();
         if (appointments == null)
@@ -44,11 +48,11 @@ public class AppointmentController : Controller
             appointments = appointments.Where(a => a.ClientId == userId.Value);
         }
 
-        var appointmentsViewModel = new AppointmentsViewModel(appointments, "Table");
-        return View(appointmentsViewModel);
+        return Ok(appointments);
     }
 
-    public async Task<IActionResult> TableById(int clientId)
+    [HttpGet("byclient/{clientId:int}")]
+    public async Task<IActionResult> GetById(int clientId)
     {
         var appointments = await _appointmentRepository.GetClientAppointment(clientId);
         if (appointments == null)
@@ -57,58 +61,14 @@ public class AppointmentController : Controller
             return NotFound("Appointment list for user not found");
         }
 
-        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-        var userId = HttpContext.Session.GetInt32("CurrentUserId");
-        if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client)
-        {
-            appointments = appointments.Where(a => a.ClientId == userId.Value);
-        }
+        appointments = appointments.Where(a => a.ClientId == clientId);
 
-        var appointmentsViewModel = new AppointmentsViewModel(appointments, "Table");
-        ViewBag.ClientId = clientId;
-        return View(appointmentsViewModel);
+        return Ok(appointments);
     }
-
-    [HttpGet]
-    public IActionResult Create(int? clientId)
-    {
-        var caregivers = _userDbContext.Users
-            .Where(u => u.Role == UserRole.Caregiver)
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.CaregiverList = new SelectList(caregivers, "UserId", "Name");
-
-        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-        var userId = HttpContext.Session.GetInt32("CurrentUserId");
-        var clientsQuery = _userDbContext.Users.Where(u => u.Role == UserRole.Client);
-        if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client)
-        {
-            clientsQuery = clientsQuery.Where(u => u.UserId == userId.Value);
-        }
-        else if (clientId.HasValue)
-        {
-            // Admin managing a specific client: narrow to that client and remember it for the view
-            clientsQuery = clientsQuery.Where(u => u.UserId == clientId.Value);
-            ViewBag.ForClientId = clientId.Value;
-        }
-        var clients = clientsQuery
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name");
-
-        // Build a list of 1h available slots across caregivers for clients
-        // and for admins creating on behalf of a client
-        if ((roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Client) || clientId.HasValue)
-        {
-            ViewBag.AvailableSlots = BuildAvailableSlotSelectList();
-        }
-
-        return View();
-    }
-
-    [HttpPost]
+    
+    [HttpPost("create")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(Appointment appointment, int? clientId)
+    public async Task<ActionResult<Appointment>> Create([FromBody] Appointment appointment, int? clientId)
     {
         try
         {
@@ -211,7 +171,7 @@ public class AppointmentController : Controller
                     }
                     catch { /* ignore best-effort cleanup */ }
 
-                    return RedirectToAction(nameof(Table));
+                    return appointment;
                 }
             }
         }
@@ -245,10 +205,10 @@ public class AppointmentController : Controller
             .Select(u => new { u.UserId, u.Name })
             .ToList();
         ViewBag.ClientList = new SelectList(clients2, "UserId", "Name");
-        return View(appointment);
+        return appointment;
     }
 
-    [HttpGet]
+    [HttpGet("update/{id}")]
     public async Task<IActionResult> Update(int id, bool returnToManage = false, int? caregiverId = null)
     {
         var appointment = await _appointmentRepository.GetAppointmentById(id);
@@ -280,9 +240,9 @@ public class AppointmentController : Controller
         return View(appointment);
     }
 
-    [HttpPost]
+    [HttpPost("update")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update([Bind("AppointmentId,Date,CaregiverId,ClientId,Location,Description")] Appointment appointment, bool returnToManage = false, int? caregiverId = null)
+    public async Task<ActionResult<Appointment>> Update([Bind("AppointmentId,Date,CaregiverId,ClientId,Location,Description")] Appointment appointment, bool returnToManage = false, int? caregiverId = null)
     {
         if (ModelState.IsValid)
         {
@@ -315,7 +275,7 @@ public class AppointmentController : Controller
                     {
                         return RedirectToAction("Manage", "Availability", new { caregiverId = caregiverId.Value });
                     }
-                    return RedirectToAction(nameof(Table));
+                    return existing;
                 }
             }
             catch (DbUpdateConcurrencyException)
@@ -342,10 +302,10 @@ public class AppointmentController : Controller
         ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId);
         ViewBag.ReturnToManage = returnToManage;
         ViewBag.ManageCaregiverId = caregiverId;
-        return View(appointment);
+        return appointment;
     }
 
-    [HttpGet]
+    [HttpDelete("delete/{id}")]
     public async Task<IActionResult> Delete(int id, bool returnToManage = false, int? caregiverId = null)
     {
         var appointment = await _appointmentRepository.GetAppointmentById(id);
@@ -365,7 +325,7 @@ public class AppointmentController : Controller
         return View(appointment);
     }
 
-    [HttpPost]
+    [HttpDelete("deleteconfirmed/{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id, bool returnToManage = false, int? caregiverId = null)
     {
@@ -416,7 +376,7 @@ public class AppointmentController : Controller
             return RedirectToAction("Manage", "Availability", new { caregiverId = caregiverToUse });
         }
 
-        return RedirectToAction(nameof(Table));
+        return NoContent();
     }
 
     // Build a select list of available 1-hour slots across all caregivers

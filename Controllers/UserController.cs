@@ -6,6 +6,8 @@ using app_ointment_backend.DAL;
 namespace app_ointment_backend.Controllers;
 
 // UserController setup based on course demos for ItemController
+[ApiController]
+[Route("api/[controller]")]
 public class UserController : Controller
 {
     private readonly IUserRepository _userRepository;
@@ -16,6 +18,15 @@ public class UserController : Controller
         _userRepository = userRepository;
         _logger = logger;
     }
+
+    [HttpGet]
+    public IActionResult GetUsers()
+    {
+        var users = _userRepository.GetAll();
+        return Ok(users);
+    }
+
+    [HttpGet("table")]
     public async Task<IActionResult> Table()
     {
         var users = await _userRepository.GetAll();
@@ -28,6 +39,19 @@ public class UserController : Controller
         return View(usersViewModel);
     }
 
+    [HttpGet("{userId:int}")]
+    public async Task<IActionResult> UserDetails(int userId)
+    {
+        var user = await _userRepository.GetUserById(userId);
+        if (user == null)
+        {
+            _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", userId);
+            return NotFound("User not found");
+        }
+        return Ok(user);
+    }
+
+    [HttpGet("details/{userId:int}")]
     public async Task<IActionResult> Details(int userId)
     {
         var user = await _userRepository.GetUserById(userId);
@@ -39,13 +63,13 @@ public class UserController : Controller
         return View(user);
     }
 
-    [HttpGet]
+    [HttpGet("create")]
     public IActionResult Create()
     {
         return View();
     }
-
-    [HttpPost]
+    
+    [HttpPost("create/new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(User user)
     {
@@ -59,7 +83,7 @@ public class UserController : Controller
         return View(user);
     }
 
-    [HttpGet]
+    [HttpGet("update/{id:int}")]
     public async Task<IActionResult> Update(int id)
     {
         var user = await _userRepository.GetUserById(id);
@@ -71,7 +95,7 @@ public class UserController : Controller
         return View(user);
     }
 
-    [HttpPost]
+    [HttpPost("update")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(User user)
     {
@@ -85,7 +109,7 @@ public class UserController : Controller
         return View(user);
     }
 
-    [HttpGet]
+    [HttpGet("delete/{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
         var user = await _userRepository.GetUserById(id);
@@ -97,7 +121,7 @@ public class UserController : Controller
         return View(user);
     }
 
-    [HttpPost]
+    [HttpPost("delete/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
@@ -109,4 +133,4 @@ public class UserController : Controller
         }
         return RedirectToAction(nameof(Table));
     }
-}    
+}
