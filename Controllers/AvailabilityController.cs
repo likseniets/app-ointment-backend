@@ -9,6 +9,8 @@ using app_ointment_backend.Models;
 using app_ointment_backend.DAL;
 
 namespace app_ointment_backend.Controllers;
+[ApiController]
+[Route("api/[controller]")]
 
 public class AvailabilityController : Controller
 {
@@ -28,6 +30,7 @@ public class AvailabilityController : Controller
 
     // GET: Availability/Manage/{caregiverId}
     // If caregiverId is not provided or is 0, show the first caregiver found.
+    [HttpGet("manage/{caregiverId?}")]
     public async Task<IActionResult> Manage(int? caregiverId)
     {
         Caregiver? caregiver = null;
@@ -59,7 +62,7 @@ public class AvailabilityController : Controller
         {
             _logger.LogError("[AvailabilityController] Caregiver not found for Id {CaregiverId}", caregiverId ?? 0);
             // No caregiver available — redirect to the users table so the user can create one.
-            return RedirectToAction("Table", "User");
+            return BadRequest("Caregiver not found");
         }
 
         // Also load this caregiver's booked appointments for display
@@ -70,11 +73,11 @@ public class AvailabilityController : Controller
             .ToListAsync();
         ViewBag.CaregiverAppointments = appts;
 
-        return View(caregiver);
+        return Ok(caregiver);
     }
 
     // POST: Availability/Create
-    [HttpPost]
+    [HttpPost("create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(Availability availability)
     {
@@ -149,7 +152,7 @@ public class AvailabilityController : Controller
     }
 
     // POST: Availability/CreateInline
-    [HttpPost]
+    [HttpPost("createinline")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateInline([FromForm] int caregiverId, [FromForm] DateTime date, [FromForm] string startTime, [FromForm] string endTime)
     {
@@ -247,7 +250,7 @@ public class AvailabilityController : Controller
     }
 
     // POST: Availability/Delete/{id}
-    [HttpPost]
+    [HttpPost("delete/{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
@@ -281,7 +284,7 @@ public class AvailabilityController : Controller
         }
     }
 
-    [HttpGet]
+    [HttpGet("update/{id}")]
     public async Task<IActionResult> Update(int id)
     {
         var availability = await _userDbContext.Availabilities.FindAsync(id);
@@ -300,7 +303,7 @@ public class AvailabilityController : Controller
         return View(availability);
     }
 
-    [HttpPost]
+    [HttpPost("update")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update([Bind("AvailabilityId,Date,StartTime,CaregiverId")] Availability model)
     {

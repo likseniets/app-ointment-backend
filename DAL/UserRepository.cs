@@ -33,14 +33,14 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            return await _context.Users.FindAsync(id);
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.UserId == id);
         }
         catch (Exception e)
         {
             _logger.LogError("[UserRepository] users FindAsync(id) failed when GetUserById() for UserId {UserId:0000}, error message: {e}", id, e.Message);
             return null;
-        }
-        
+        }   
     }
 
     public async Task<bool> CreateUser(User user)
