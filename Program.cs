@@ -25,6 +25,12 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
 });
 
+builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("CorsPolicy",
+                builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+        });
+
 // Add DbContext
 builder.Services.AddDbContext<UserDbContext>(options =>
 {
@@ -56,10 +62,6 @@ if (app.Environment.IsDevelopment())
     DBInit.Seed(app);
     app.UseSwagger();
     app.UseSwaggerUI();
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 }
 
 app.UseHttpsRedirection();
@@ -72,5 +74,7 @@ app.UseSession();
 app.UseAuthorization();
 
 app.MapDefaultControllerRoute();
+
+app.UseCors("CorsPolicy");
 
 app.Run();
