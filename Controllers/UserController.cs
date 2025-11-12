@@ -39,8 +39,8 @@ public class UserController : Controller
         return View(usersViewModel);
     }
 
-    [HttpGet("{userId:int}")]
-    public async Task<IActionResult> UserDetails(int userId)
+    [HttpGet("user/{userId:int}")]
+    public async Task<IActionResult> userDetails(int userId)
     {
         var user = await _userRepository.GetUserById(userId);
         if (user == null)
