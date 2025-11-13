@@ -62,150 +62,108 @@ public class AppointmentController : Controller
         }
 
         appointments = appointments.Where(a => a.ClientId == clientId);
+        var appointmentDtos = appointments.Select(AppointmentDto.FromAppointment);
 
-        return Ok(appointments);
+        return Ok(appointmentDtos);
     }
-    
-    [HttpPost("create")]
-    [ValidateAntiForgeryToken]
-    public async Task<ActionResult<Appointment>> Create([FromBody] Appointment appointment, int? clientId)
+
+    [HttpGet("bycaregiver/{caregiverId:int}")]
+    public async Task<IActionResult> GetByCaregiver(int caregiverId)
     {
+        var appointments = await _appointmentRepository.GetCaregiverAppointments(caregiverId);
+        if (appointments == null)
+        {
+            _logger.LogError("[AppointmentController] Appointment list not found while executing _appointmentRepository.GetCaregiverAppointments()");
+            return NotFound("Appointment list for caregiver not found");
+        }
+
+        var appointmentDtos = appointments.Select(AppointmentDto.FromAppointment);
+        return Ok(appointmentDtos);
+    }
+
+    [HttpPost("create")]
+    public async Task<IActionResult> Create([FromBody] CreateAppointmentDto appointmentDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         try
         {
-            var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-            var userId = HttpContext.Session.GetInt32("CurrentUserId");
-            DateTime startDt;
-
-            if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client)
+            // Get the availability slot
+            var availability = await _availabilityRepository.GetAvailabilityById(appointmentDto.AvailabilityId);
+            if (availability == null)
             {
-                // Clients can only create for themselves and must pick a slot
-                appointment.ClientId = userId.Value;
-                var selectedSlot = Request.Form["SelectedSlot"].ToString();
-                if (!string.IsNullOrEmpty(selectedSlot))
-                {
-                    var parts = selectedSlot.Split('|');
-                    if (parts.Length == 2 && int.TryParse(parts[0], out var parsedCaregiverId) && DateTime.TryParse(parts[1], null, DateTimeStyles.RoundtripKind, out var parsedStart))
-                    {
-                        appointment.CaregiverId = parsedCaregiverId;
-                        appointment.Date = parsedStart;
-                        // Clear any prior model state errors for Date/CaregiverId and re-validate
-                        ModelState.Remove(nameof(Appointment.Date));
-                        ModelState.Remove(nameof(Appointment.CaregiverId));
-                        TryValidateModel(appointment);
-                    }
-                    else
-                    {
-                        ModelState.AddModelError(string.Empty, "Invalid slot selection.");
-                    }
-                }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Please select an available slot.");
-                }
-            }
-            else if (clientId.HasValue)
-            {
-                // Admin creating on behalf of a specific client: mirror client flow
-                appointment.ClientId = clientId.Value;
-                var selectedSlot = Request.Form["SelectedSlot"].ToString();
-                if (!string.IsNullOrEmpty(selectedSlot))
-                {
-                    var parts = selectedSlot.Split('|');
-                    if (parts.Length == 2 && int.TryParse(parts[0], out var parsedCaregiverId) && DateTime.TryParse(parts[1], null, DateTimeStyles.RoundtripKind, out var parsedStart))
-                    {
-                        appointment.CaregiverId = parsedCaregiverId;
-                        appointment.Date = parsedStart;
-                        // Clear any prior model state errors for Date/CaregiverId and re-validate
-                        ModelState.Remove(nameof(Appointment.Date));
-                        ModelState.Remove(nameof(Appointment.CaregiverId));
-                        TryValidateModel(appointment);
-                    }
-                    else
-                    {
-                        ModelState.AddModelError(string.Empty, "Invalid slot selection.");
-                    }
-                }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Please select an available slot.");
-                }
+                return BadRequest(new { message = "Selected availability slot not found" });
             }
 
-            // Basic sanity: referenced users must exist
-            bool caregiverExists = await _userDbContext.Users.AnyAsync(u => u.UserId == appointment.CaregiverId && u.Role == UserRole.Caregiver);
-            bool clientExists = await _userDbContext.Users.AnyAsync(u => u.UserId == appointment.ClientId && u.Role == UserRole.Client);
-            if (!caregiverExists)
+            // Verify client exists
+            var client = await _userDbContext.Users.FirstOrDefaultAsync(u => u.UserId == appointmentDto.ClientId && u.Role == UserRole.Client);
+            if (client == null)
             {
-                ModelState.AddModelError("CaregiverId", "Selected caregiver does not exist.");
-            }
-            if (!clientExists)
-            {
-                ModelState.AddModelError("ClientId", "Selected client does not exist.");
+                return BadRequest(new { message = "Client not found" });
             }
 
-            // Check that the slot is still free and in availability (best-effort)
-            startDt = appointment.Date;
-            var endDt = appointment.Date.AddHours(1);
-            bool alreadyBooked = await _userDbContext.Appointments.AnyAsync(a => a.CaregiverId == appointment.CaregiverId && a.Date == startDt);
+            // Verify caregiver exists
+            var caregiver = await _userDbContext.Users.FirstOrDefaultAsync(u => u.UserId == availability.CaregiverId && u.Role == UserRole.Caregiver);
+            if (caregiver == null)
+            {
+                return BadRequest(new { message = "Caregiver not found" });
+            }
+
+            // Parse the availability time to create the appointment datetime
+            if (!TimeSpan.TryParse(availability.StartTime, out var startTime))
+            {
+                return BadRequest(new { message = "Invalid availability time format" });
+            }
+
+            var appointmentDate = availability.Date.Date + startTime;
+
+            // Check if slot is already booked
+            bool alreadyBooked = await _userDbContext.Appointments.AnyAsync(a =>
+                a.CaregiverId == availability.CaregiverId &&
+                a.Date == appointmentDate);
             if (alreadyBooked)
             {
-                ModelState.AddModelError(string.Empty, "Selected time slot already booked. Please choose another.");
+                return BadRequest(new { message = "Selected time slot is already booked" });
             }
 
-            if (ModelState.IsValid)
+            // Create the appointment
+            var appointment = new Appointment
             {
-                bool returnOk = await _appointmentRepository.CreateAppointment(appointment);
-                if (returnOk)
+                Date = appointmentDate,
+                CaregiverId = availability.CaregiverId,
+                ClientId = appointmentDto.ClientId,
+                Location = appointmentDto.Location,
+                Description = appointmentDto.Description
+            };
+
+            bool created = await _appointmentRepository.CreateAppointment(appointment);
+            if (created)
+            {
+                // Remove the availability slot
+                await _availabilityRepository.DeleteAvailability(appointmentDto.AvailabilityId);
+
+                // Get all appointments for the client and return them
+                var clientAppointments = await _appointmentRepository.GetClientAppointment(appointmentDto.ClientId);
+                if (clientAppointments != null)
                 {
-                    try
-                    {
-                        // Remove matching availability slot (1h slot)
-                        string startStr = startDt.ToString("HH:mm");
-                        string endStr = endDt.ToString("HH:mm");
-                        var slot = await _userDbContext.Availabilities
-                            .FirstOrDefaultAsync(a => a.CaregiverId == appointment.CaregiverId && a.Date.Date == startDt.Date && a.StartTime == startStr && a.EndTime == endStr);
-                        if (slot != null)
-                        {
-                            await _availabilityRepository.DeleteAvailability(slot.AvailabilityId);
-                        }
-                    }
-                    catch { /* ignore best-effort cleanup */ }
-
-                    return appointment;
+                    var appointmentDtos = clientAppointments
+                        .OrderBy(a => a.Date)
+                        .Select(AppointmentDto.FromAppointment);
+                    return Ok(appointmentDtos);
                 }
+                return Ok(new { message = "Appointment created successfully" });
             }
-        }
-        catch (DbUpdateException)
-        {
-            ModelState.AddModelError(string.Empty, "Unable to save appointment. Try again.");
-        }
 
-        // Rebuild inputs/dropdowns for redisplay
-        var caregiversForRedisplay = _userDbContext.Users
-            .Where(u => u.Role == UserRole.Caregiver)
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.CaregiverList = new SelectList(caregiversForRedisplay, "UserId", "Name");
-
-        var roleInt2 = HttpContext.Session.GetInt32("CurrentUserRole");
-        var userId2 = HttpContext.Session.GetInt32("CurrentUserId");
-        var clientsQuery2 = _userDbContext.Users.Where(u => u.Role == UserRole.Client);
-        if (roleInt2.HasValue && userId2.HasValue && (UserRole)roleInt2.Value == UserRole.Client)
-        {
-            clientsQuery2 = clientsQuery2.Where(u => u.UserId == userId2.Value);
-            ViewBag.AvailableSlots = BuildAvailableSlotSelectList();
+            return BadRequest(new { message = "Failed to create appointment" });
         }
-        else if (clientId.HasValue)
+        catch (DbUpdateException ex)
         {
-            clientsQuery2 = clientsQuery2.Where(u => u.UserId == clientId.Value);
-            ViewBag.AvailableSlots = BuildAvailableSlotSelectList();
-            ViewBag.ForClientId = clientId.Value;
+            _logger.LogError("[AppointmentController] Failed to create appointment: {Error}", ex.Message);
+            return BadRequest(new { message = "Unable to save appointment. Try again." });
         }
-        var clients2 = clientsQuery2
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.ClientList = new SelectList(clients2, "UserId", "Name");
-        return appointment;
     }
 
     [HttpGet("update/{id}")]

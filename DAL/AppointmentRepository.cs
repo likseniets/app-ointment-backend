@@ -32,7 +32,7 @@ public class AppointmentRepository : IAppointmentRepository
         }
 
     }
-    
+
     public async Task<IEnumerable<Appointment>?> GetClientAppointment(int id)
     {
         try
@@ -49,7 +49,7 @@ public class AppointmentRepository : IAppointmentRepository
             _logger.LogError("[AppointmentRepository] appointments query failed when GetAll(), error message: {e}", e.Message);
             return null;
         }
-        
+
     }
 
     public async Task<Appointment?> GetAppointmentById(int id)
@@ -67,7 +67,7 @@ public class AppointmentRepository : IAppointmentRepository
             _logger.LogError("[AppointmentRepository] appointments query failed when GetAppointmentById() for AppointmentId {AppointmentId:0000}, error message: {e}", id, e.Message);
             return null;
         }
-        
+
     }
 
     public async Task<bool> CreateAppointment(Appointment appointment)
@@ -83,7 +83,7 @@ public class AppointmentRepository : IAppointmentRepository
             _logger.LogError("[AppointmentRepository] appointment creation failed for appointment {@appointment}, error message: {e}", appointment, e.Message);
             return false;
         }
-        
+
     }
 
     public async Task<bool> UpdateAppointment(Appointment appointment)
@@ -120,8 +120,27 @@ public class AppointmentRepository : IAppointmentRepository
         catch (Exception e)
         {
             _logger.LogError("[AppointmentRepository] appointment deletion failed for AppointmentId {AppointmentId:0000}, error message: {e}", id, e.Message);
-                return false;
+            return false;
         }
-        
+
+    }
+
+    public async Task<IEnumerable<Appointment>?> GetCaregiverAppointments(int caregiverId)
+    {
+        try
+        {
+            return await _context.Appointments
+                .Include(a => a.Client)
+                .Where(a => a.CaregiverId == caregiverId)
+                .OrderBy(a => a.Date)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[AppointmentRepository] appointments query failed when GetCaregiverAppointments() for CaregiverId {CaregiverId:0000}, error message: {e}", caregiverId, e.Message);
+            return null;
+        }
     }
 }
+

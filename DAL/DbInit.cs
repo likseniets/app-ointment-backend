@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using app_ointment_backend.Models;
+using BCrypt.Net;
 
 namespace app_ointment_backend.DAL;
 
@@ -28,7 +29,8 @@ public static class DBInit
                     Adress = "Bever 8",
                     Email = "s371452@oslomet.no",
                     Phone = "46213657",
-                    ImageUrl = "/images/artur.jpg"
+                    ImageUrl = "/images/artur.jpg",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
                 },
                 new Caregiver
                 {
@@ -37,7 +39,8 @@ public static class DBInit
                     Adress = "Bislett",
                     Email = "jemel7762@oslomet.no",
                     Phone = "82888222",
-                    ImageUrl = "/images/jeppe.jpg"
+                    ImageUrl = "/images/jeppe.jpg",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
                 },
                 new Caregiver
                 {
@@ -46,7 +49,8 @@ public static class DBInit
                     Adress = "Gingertown",
                     Email = "s371393@oslomet.no",
                     Phone = "82888222",
-                    ImageUrl = "/images/kjos.jpg"
+                    ImageUrl = "/images/kjos.jpg",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
                 },
                 new Client
                 {
@@ -55,7 +59,8 @@ public static class DBInit
                     Adress = "Gokk",
                     Email = "s371414@oslomet.no",
                     Phone = "99884432",
-                    ImageUrl = "/images/eskil.jpg"
+                    ImageUrl = "/images/eskil.jpg",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
                 }
             };
 

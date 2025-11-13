@@ -43,14 +43,58 @@ public class UserRepository : IUserRepository
         }   
     }
 
+    public async Task<User?> GetUserByEmail(string email)
+    {
+        try
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] users FirstOrDefaultAsync() failed when GetUserByEmail() for Email {Email}, error message: {e}", email, e.Message);
+            return null;
+        }
+    }
+
+    public async Task<Caregiver?> GetCaregiverWithAvailability(int caregiverId)
+    {
+        try
+        {
+            return await _context.Caregivers
+                .Include(c => c.Availability)
+                .FirstOrDefaultAsync(c => c.UserId == caregiverId && c.Role == UserRole.Caregiver);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] caregiver query failed when GetCaregiverWithAvailability() for CaregiverId {CaregiverId:0000}, error message: {e}", caregiverId, e.Message);
+            return null;
+        }
+    }
+
+    public async Task<Caregiver?> GetFirstCaregiver()
+    {
+        try
+        {
+            return await _context.Caregivers
+                .Include(c => c.Availability)
+                .FirstOrDefaultAsync(c => c.Role == UserRole.Caregiver);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] caregiver query failed when GetFirstCaregiver(), error message: {e}", e.Message);
+            return null;
+        }
+    }
+
     public async Task<bool> CreateUser(User user)
     {
         try
         {
             var entity = user.Role switch
             {
-                UserRole.Caregiver => new Caregiver { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role },
-                UserRole.Client => new Client { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role },
+                UserRole.Caregiver => new Caregiver { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role, PasswordHash = user.PasswordHash, ImageUrl = user.ImageUrl },
+                UserRole.Client => new Client { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role, PasswordHash = user.PasswordHash, ImageUrl = user.ImageUrl },
                 _ => user
             };
             _context.Add(entity);

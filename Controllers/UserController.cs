@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using app_ointment_backend.Models;
 using app_ointment_backend.ViewModels;
 using app_ointment_backend.DAL;
+using BCrypt.Net;
 
 namespace app_ointment_backend.Controllers;
 
@@ -20,10 +21,43 @@ public class UserController : Controller
     }
 
     [HttpGet]
-    public Task<IActionResult> GetUsers()
+    public async Task<IActionResult> GetUsers()
     {
-        var users = _userRepository.GetAll();
-        return Task.FromResult<IActionResult>(Ok(users));
+        var users = await _userRepository.GetAll();
+        if (users == null)
+        {
+            _logger.LogError("[UserController] User list not found while executing _userRepository.GetAll()");
+            return NotFound("User list not found");
+        }
+        var userDtos = users.Select(UserDto.FromUser);
+        return Ok(userDtos);
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var user = await _userRepository.GetUserByEmail(loginDto.Email);
+        if (user == null)
+        {
+            _logger.LogWarning("[UserController] Login attempt failed - user not found for email {Email}", loginDto.Email);
+            return Unauthorized("Invalid email or password");
+        }
+
+        // Verify password
+        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash);
+        if (!isPasswordValid)
+        {
+            _logger.LogWarning("[UserController] Login attempt failed - invalid password for email {Email}", loginDto.Email);
+            return Unauthorized("Invalid email or password");
+        }
+
+        _logger.LogInformation("[UserController] User {UserId} logged in successfully", user.UserId);
+        return Ok(UserDto.FromUser(user));
     }
 
     [HttpGet("table")]
@@ -48,7 +82,7 @@ public class UserController : Controller
             _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", userId);
             return NotFound("User not found");
         }
-        return Ok(user);
+        return Ok(UserDto.FromUser(user));
     }
 
     [HttpGet("details/{userId:int}")]
@@ -71,16 +105,28 @@ public class UserController : Controller
 
     [HttpPost("create/new")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(User user)
+    public async Task<IActionResult> Create(CreateUserDto userDto)
     {
         if (ModelState.IsValid)
         {
+            // Hash the password before creating the user
+            var user = new User
+            {
+                Name = userDto.Name,
+                Role = userDto.Role,
+                Adress = userDto.Adress,
+                Phone = userDto.Phone,
+                Email = userDto.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(userDto.Password),
+                ImageUrl = userDto.ImageUrl
+            };
+
             bool returnOk = await _userRepository.CreateUser(user);
             if (returnOk)
                 return RedirectToAction(nameof(Table));
         }
-        _logger.LogWarning("[UserController] user creation failed {@user}", user);
-        return View(user);
+        _logger.LogWarning("[UserController] user creation failed {@userDto}", userDto);
+        return View(userDto);
     }
 
     [HttpGet("update/{id:int}")]
