@@ -39,7 +39,7 @@ public class UserController : Controller
         return View(usersViewModel);
     }
 
-    [HttpGet("user/{userId:int}")]
+    [HttpGet("{userId:int}")]
     public async Task<IActionResult> userDetails(int userId)
     {
         var user = await _userRepository.GetUserById(userId);
