@@ -33,6 +33,19 @@ public class UserController : Controller
         return Ok(userDtos);
     }
 
+    [HttpGet("caregivers")]
+    public async Task<IActionResult> GetCaregivers()
+    {
+        var caregivers = await _userRepository.GetCaregivers();
+        if (caregivers == null)
+        {
+            _logger.LogError("[UserController] Caregiver list not found while executing _userRepository.GetCaregivers()");
+            return NotFound("Caregiver list not found");
+        }
+        var caregiverDtos = caregivers.Select(GetCaregiverWithAvailability.FromCaregiver);
+        return Ok(caregiverDtos);
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
     {

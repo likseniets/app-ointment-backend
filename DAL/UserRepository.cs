@@ -29,6 +29,22 @@ public class UserRepository : IUserRepository
         
     }
 
+    public async Task<IEnumerable<Caregiver>?> GetCaregivers()
+    {
+        try
+        {
+            return await _context.Caregivers
+                .Where(c => c.Role == UserRole.Caregiver)
+                .Include(c => c.Availability)
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] caregivers query failed when GetCaregivers(), error message: {e}", e.Message);
+            return null;
+        }
+    }
+
     public async Task<User?> GetUserById(int id)
     {
         try

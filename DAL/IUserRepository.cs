@@ -5,6 +5,7 @@ namespace app_ointment_backend.DAL;
 public interface IUserRepository
 {
     Task<IEnumerable<User>?> GetAll();
+    Task<IEnumerable<Caregiver>?> GetCaregivers();
     Task<User?> GetUserById(int id);
     Task<User?> GetUserByEmail(string email);
     Task<Caregiver?> GetCaregiverWithAvailability(int caregiverId);
