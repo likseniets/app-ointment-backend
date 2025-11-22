@@ -6,6 +6,7 @@ public interface IUserRepository
 {
     Task<IEnumerable<User>?> GetAll();
     Task<IEnumerable<Caregiver>?> GetCaregivers();
+    Task<IEnumerable<Client>?> GetClients();
     Task<User?> GetUserById(int id);
     Task<User?> GetUserByEmail(string email);
     Task<Caregiver?> GetCaregiverWithAvailability(int caregiverId);

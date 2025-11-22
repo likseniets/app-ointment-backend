@@ -26,7 +26,7 @@ public class UserRepository : IUserRepository
             _logger.LogError("[UserRepository] users ToListAsync() failed when GetAll(), error message: {e}", e.Message);
             return null;
         }
-        
+
     }
 
     public async Task<IEnumerable<Caregiver>?> GetCaregivers()
@@ -45,6 +45,21 @@ public class UserRepository : IUserRepository
         }
     }
 
+    public async Task<IEnumerable<Client>?> GetClients()
+    {
+        try
+        {
+            return await _context.Clients
+                .Where(c => c.Role == UserRole.Client)
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] clients query failed when GetClients(), error message: {e}", e.Message);
+            return null;
+        }
+    }
+
     public async Task<User?> GetUserById(int id)
     {
         try
@@ -56,7 +71,7 @@ public class UserRepository : IUserRepository
         {
             _logger.LogError("[UserRepository] users FindAsync(id) failed when GetUserById() for UserId {UserId:0000}, error message: {e}", id, e.Message);
             return null;
-        }   
+        }
     }
 
     public async Task<User?> GetUserByEmail(string email)
@@ -122,7 +137,7 @@ public class UserRepository : IUserRepository
             _logger.LogError("[UserRepository] user creation failed for user {@user}, error message: {e}", user, e.Message);
             return false;
         }
-        
+
     }
 
     public async Task<bool> UpdateUser(User user)
@@ -159,8 +174,8 @@ public class UserRepository : IUserRepository
         catch (Exception e)
         {
             _logger.LogError("[UserRepository] user deletion failed for UserId {UserId:0000}, error message: {e}", id, e.Message);
-                return false;
+            return false;
         }
-        
+
     }
 }

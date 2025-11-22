@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using app_ointment_backend.Models;
-using app_ointment_backend.ViewModels;
 using app_ointment_backend.DAL;
 using System.Globalization;
 
@@ -32,26 +33,63 @@ public class AppointmentController : Controller
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<Appointment>>> GetAll()
     {
-        var appointments = await _appointmentRepository.GetAll();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        {
+            _logger.LogError("[AppointmentController] Unable to get user ID from JWT claims");
+            return Unauthorized("Invalid token");
+        }
+
+        if (!Enum.TryParse<UserRole>(roleClaim, out var role))
+        {
+            _logger.LogError("[AppointmentController] Unable to parse user role from JWT claims");
+            return Unauthorized("Invalid token");
+        }
+
+        IEnumerable<Appointment>? appointments;
+
+        if (role == UserRole.Client)
+        {
+            appointments = await _appointmentRepository.GetClientAppointment(userId);
+            if (appointments == null)
+            {
+                _logger.LogError("[AppointmentController] Appointment list not found for client {ClientId}", userId);
+                return NotFound("Appointment list not found");
+            }
+            var appointmentDtos = appointments.Select(AppointmentDto.FromAppointment);
+            return Ok(appointmentDtos);
+        }
+        else if (role == UserRole.Caregiver)
+        {
+            appointments = await _appointmentRepository.GetCaregiverAppointments(userId);
+            if (appointments == null)
+            {
+                _logger.LogError("[AppointmentController] Appointment list not found for caregiver {CaregiverId}", userId);
+                return NotFound("Appointment list not found");
+            }
+            var appointmentDtos = appointments.Select(AppointmentDto.FromAppointment);
+            return Ok(appointmentDtos);
+        }
+
+        // For admin or other roles, return all appointments
+        appointments = await _appointmentRepository.GetAll();
         if (appointments == null)
         {
             _logger.LogError("[AppointmentController] Appointment list not found while executing _appointmentRepository.GetAll()");
             return NotFound("Appointment list not found");
         }
 
-        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-        var userId = HttpContext.Session.GetInt32("CurrentUserId");
-        if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client)
-        {
-            appointments = appointments.Where(a => a.ClientId == userId.Value);
-        }
-
-        return Ok(appointments);
+        var allAppointmentDtos = appointments.Select(AppointmentDto.FromAppointment);
+        return Ok(allAppointmentDtos);
     }
 
     [HttpGet("byclient/{clientId:int}")]
+    [Authorize]
     public async Task<IActionResult> GetById(int clientId)
     {
         var appointments = await _appointmentRepository.GetClientAppointment(clientId);
@@ -68,6 +106,7 @@ public class AppointmentController : Controller
     }
 
     [HttpGet("bycaregiver/{caregiverId:int}")]
+    [Authorize]
     public async Task<IActionResult> GetByCaregiver(int caregiverId)
     {
         var appointments = await _appointmentRepository.GetCaregiverAppointments(caregiverId);
@@ -82,6 +121,7 @@ public class AppointmentController : Controller
     }
 
     [HttpPost("create")]
+    [Authorize]
     public async Task<IActionResult> Create([FromBody] CreateAppointmentDto appointmentDto)
     {
         if (!ModelState.IsValid)
@@ -166,209 +206,131 @@ public class AppointmentController : Controller
         }
     }
 
-    [HttpGet("update/{id}")]
-    public async Task<IActionResult> Update(int id, bool returnToManage = false, int? caregiverId = null)
+    [HttpPut("update/{id}")]
+    [Authorize]
+    public async Task<IActionResult> Update(int id, [FromBody] CreateAppointmentDto updateDto)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+        {
+            return Unauthorized("Invalid token");
+        }
+
+        if (!Enum.TryParse<UserRole>(roleClaim, out var currentRole))
+        {
+            return Unauthorized("Invalid role");
+        }
+
         var appointment = await _appointmentRepository.GetAppointmentById(id);
         if (appointment == null)
         {
-            _logger.LogError("[AppointmentController] appointment not found when updating the AppointmentId {AppointmentId:0000}", id);
-            return BadRequest("Appointment not found");
+            return NotFound("Appointment not found");
         }
-        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-        var userId = HttpContext.Session.GetInt32("CurrentUserId");
-        if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client && appointment.ClientId != userId.Value)
+
+        // Only the client, caregiver, or admin can update the appointment
+        if (currentRole != UserRole.Admin &&
+            appointment.ClientId != currentUserId &&
+            appointment.CaregiverId != currentUserId)
         {
+            _logger.LogWarning("[AppointmentController] User {UserId} attempted to update appointment {AppointmentId}", currentUserId, id);
             return Forbid();
         }
-        // Populate dropdowns for caregiver and client
-        var caregivers = _userDbContext.Users
-            .Where(u => u.Role == UserRole.Caregiver)
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.CaregiverList = new SelectList(caregivers, "UserId", "Name", appointment.CaregiverId);
 
-        var clients = _userDbContext.Users
-            .Where(u => u.Role == UserRole.Client)
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId);
-        ViewBag.ReturnToManage = returnToManage;
-        ViewBag.ManageCaregiverId = caregiverId;
-        return View(appointment);
-    }
+        // Update appointment properties
+        appointment.Location = updateDto.Location;
+        appointment.Description = updateDto.Description;
 
-    [HttpPost("update")]
-    [ValidateAntiForgeryToken]
-    public async Task<ActionResult<Appointment>> Update([Bind("AppointmentId,Date,CaregiverId,ClientId,Location,Description")] Appointment appointment, bool returnToManage = false, int? caregiverId = null)
-    {
-        if (ModelState.IsValid)
+        try
         {
-            try
+            bool success = await _appointmentRepository.UpdateAppointment(appointment);
+            if (success)
             {
-                var existing = await _appointmentRepository.GetAppointmentById(appointment.AppointmentId);
-                if (existing == null)
-                {
-                    _logger.LogError("[AppointmentController] appointment not found for AppointmentId");
-                    return NotFound();
-                }
-
-                var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-                var userId = HttpContext.Session.GetInt32("CurrentUserId");
-                if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client && existing.ClientId != userId.Value)
-                {
-                    return Forbid();
-                }
-
-                // Update only allowed fields to avoid overwriting non-posted values
-                existing.Date = appointment.Date;
-                existing.CaregiverId = appointment.CaregiverId;
-                existing.ClientId = appointment.ClientId; // kept from hidden field
-                existing.Location = appointment.Location;
-                existing.Description = appointment.Description;
-                bool returnOk = await _appointmentRepository.UpdateAppointment(existing);
-                if (returnOk)
-                {
-                    if (returnToManage && caregiverId.HasValue)
-                    {
-                        return RedirectToAction("Manage", "Availability", new { caregiverId = caregiverId.Value });
-                    }
-                    return existing;
-                }
+                _logger.LogInformation("[AppointmentController] Appointment {AppointmentId} updated successfully", id);
+                return Ok(AppointmentDto.FromAppointment(appointment));
             }
-            catch (DbUpdateConcurrencyException)
-            {
-                ModelState.AddModelError(string.Empty, "The appointment was updated by another process. Reload and try again.");
-            }
-            catch (DbUpdateException)
-            {
-                ModelState.AddModelError(string.Empty, "Unable to save changes. Try again.");
-            }
+            return BadRequest("Failed to update appointment");
         }
-
-        // Rebuild dropdowns when redisplaying the form. Without this, the app does not return to the appointments table and does not save the update.
-        var caregivers = _userDbContext.Users
-            .Where(u => u.Role == UserRole.Caregiver)
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.CaregiverList = new SelectList(caregivers, "UserId", "Name", appointment.CaregiverId);
-
-        var clients = _userDbContext.Users
-            .Where(u => u.Role == UserRole.Client)
-            .Select(u => new { u.UserId, u.Name })
-            .ToList();
-        ViewBag.ClientList = new SelectList(clients, "UserId", "Name", appointment.ClientId);
-        ViewBag.ReturnToManage = returnToManage;
-        ViewBag.ManageCaregiverId = caregiverId;
-        return appointment;
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError("[AppointmentController] Failed to update appointment {AppointmentId}: {Error}", id, ex.Message);
+            return BadRequest("Unable to update appointment. Please try again.");
+        }
     }
 
     [HttpDelete("delete/{id}")]
-    public async Task<IActionResult> Delete(int id, bool returnToManage = false, int? caregiverId = null)
+    [Authorize]
+    public async Task<IActionResult> Delete(int id)
     {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+        {
+            return Unauthorized("Invalid token");
+        }
+
+        if (!Enum.TryParse<UserRole>(roleClaim, out var currentRole))
+        {
+            return Unauthorized("Invalid role");
+        }
+
         var appointment = await _appointmentRepository.GetAppointmentById(id);
         if (appointment == null)
         {
-            _logger.LogError("[AppointmentController] appointment not found for Id {AppointmentId:0000}", id);
-            return BadRequest("Not found");
-        }
-        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-        var userId = HttpContext.Session.GetInt32("CurrentUserId");
-        if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client && appointment.ClientId != userId.Value)
-        {
-            return Forbid();
-        }
-        ViewBag.ReturnToManage = returnToManage;
-        ViewBag.ManageCaregiverId = caregiverId;
-        return View(appointment);
-    }
-
-    [HttpDelete("deleteconfirmed/{id}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id, bool returnToManage = false, int? caregiverId = null)
-    {
-        var existing = await _appointmentRepository.GetAppointmentById(id);
-        if (existing == null)
-        {
-            return NotFound();
-        }
-        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-        var userId = HttpContext.Session.GetInt32("CurrentUserId");
-        if (roleInt.HasValue && userId.HasValue && (UserRole)roleInt.Value == UserRole.Client && existing.ClientId != userId.Value)
-        {
-            return Forbid();
-        }
-        bool returnOk = await _appointmentRepository.DeleteAppointment(id);
-        if (!returnOk)
-        {
-            _logger.LogError("[AppointmentController] Appointment deletion failed for the Id {AppointmentId:0000}", id);
-            return BadRequest("Appointment deletion failed");
+            return NotFound("Appointment not found");
         }
 
-        // Re-open the corresponding availability slot (best-effort)
+        // Only the client, caregiver, or admin can delete the appointment
+        if (currentRole != UserRole.Admin &&
+            appointment.ClientId != currentUserId &&
+            appointment.CaregiverId != currentUserId)
+        {
+            _logger.LogWarning("[AppointmentController] User {UserId} attempted to delete appointment {AppointmentId}", currentUserId, id);
+            return Forbid();
+        }
+
         try
         {
-            var start = existing.Date;
-            var end = start.AddHours(1);
-            string startStr = start.ToString("HH:mm");
-            string endStr = end.ToString("HH:mm");
-
-            bool exists = await _userDbContext.Availabilities.AnyAsync(a => a.CaregiverId == existing.CaregiverId && a.Date.Date == start.Date && a.StartTime == startStr && a.EndTime == endStr);
-            if (!exists)
+            bool success = await _appointmentRepository.DeleteAppointment(id);
+            if (success)
             {
-                var newSlot = new Availability
+                _logger.LogInformation("[AppointmentController] Appointment {AppointmentId} deleted successfully", id);
+
+                // Return updated appointments list based on user role
+                IEnumerable<Appointment>? appointments = null;
+                if (currentRole == UserRole.Client || appointment.ClientId == currentUserId)
                 {
-                    CaregiverId = existing.CaregiverId,
-                    Date = start.Date,
-                    StartTime = startStr,
-                    EndTime = endStr
-                };
-                await _availabilityRepository.CreateAvailability(newSlot);
+                    appointments = await _appointmentRepository.GetClientAppointment(currentUserId);
+                }
+                else if (currentRole == UserRole.Caregiver || appointment.CaregiverId == currentUserId)
+                {
+                    appointments = await _appointmentRepository.GetCaregiverAppointments(currentUserId);
+                }
+
+                if (appointments != null)
+                {
+                    var appointmentDtos = appointments
+                        .OrderBy(a => a.Date)
+                        .Select(AppointmentDto.FromAppointment);
+                    return Ok(new { message = "Appointment deleted successfully", appointments = appointmentDtos });
+                }
+
+                return Ok(new { message = "Appointment deleted successfully" });
             }
-        }
-        catch { /* ignore slot recreation failures */ }
 
-        if (returnToManage && (caregiverId.HasValue || existing != null))
+            return BadRequest("Failed to delete appointment");
+        }
+        catch (DbUpdateException ex)
         {
-            var caregiverToUse = caregiverId ?? existing.CaregiverId;
-            return RedirectToAction("Manage", "Availability", new { caregiverId = caregiverToUse });
+            _logger.LogError("[AppointmentController] Failed to delete appointment {AppointmentId}: {Error}", id, ex.Message);
+            return BadRequest("Unable to delete appointment. Please try again.");
         }
-
-        return NoContent();
-    }
-
-    // Build a select list of available 1-hour slots across all caregivers
-    private List<SelectListItem> BuildAvailableSlotSelectList()
-    {
-        var now = DateTime.Now;
-        var slots = new List<(int CaregiverId, string CaregiverName, DateTime Start)>();
-        var availabilities = _userDbContext.Availabilities
-            .Include(a => a.Caregiver)
-            .AsNoTracking()
-            .ToList();
-
-        foreach (var a in availabilities)
-        {
-            if (!TimeSpan.TryParse(a.StartTime, out var startTs) || !TimeSpan.TryParse(a.EndTime, out var endTs))
-                continue;
-            for (var t = startTs; t + TimeSpan.FromHours(1) <= endTs; t = t + TimeSpan.FromHours(1))
-            {
-                var slotStart = a.Date.Date + t;
-                if (slotStart < now) continue;
-                bool booked = _userDbContext.Appointments.Any(ap => ap.CaregiverId == a.CaregiverId && ap.Date == slotStart);
-                if (booked) continue;
-                slots.Add((a.CaregiverId, a.Caregiver?.Name ?? $"Caregiver #{a.CaregiverId}", slotStart));
-            }
-        }
-
-        var items = slots
-            .OrderBy(s => s.Start)
-            .Select(s => new SelectListItem
-            {
-                Value = $"{s.CaregiverId}|{s.Start:O}",
-                Text = $"{s.Start:yyyy-MM-dd HH:mm} - {s.Start.AddHours(1):HH:mm} — {s.CaregiverName}"
-            })
-            .ToList();
-        return items;
     }
 }

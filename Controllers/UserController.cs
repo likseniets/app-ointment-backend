@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using app_ointment_backend.Models;
-using app_ointment_backend.ViewModels;
 using app_ointment_backend.DAL;
 using BCrypt.Net;
 
@@ -21,6 +22,28 @@ public class UserController : Controller
     }
 
     [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> GetCurrentUser()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        {
+            _logger.LogError("[UserController] Unable to get user ID from JWT claims");
+            return Unauthorized("Invalid token");
+        }
+
+        var user = await _userRepository.GetUserById(userId);
+        if (user == null)
+        {
+            _logger.LogError("[UserController] User not found for UserId {UserId}", userId);
+            return NotFound("User not found");
+        }
+
+        return Ok(UserDto.FromUser(user));
+    }
+
+    [HttpGet("all")]
+    [Authorize]
     public async Task<IActionResult> GetUsers()
     {
         var users = await _userRepository.GetAll();
@@ -33,7 +56,21 @@ public class UserController : Controller
         return Ok(userDtos);
     }
 
+    [HttpGet("{userId:int}")]
+    [Authorize]
+    public async Task<IActionResult> userDetails(int userId)
+    {
+        var user = await _userRepository.GetUserById(userId);
+        if (user == null)
+        {
+            _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", userId);
+            return NotFound("User not found");
+        }
+        return Ok(UserDto.FromUser(user));
+    }
+
     [HttpGet("caregivers")]
+    [Authorize]
     public async Task<IActionResult> GetCaregivers()
     {
         var caregivers = await _userRepository.GetCaregivers();
@@ -46,150 +83,259 @@ public class UserController : Controller
         return Ok(caregiverDtos);
     }
 
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
+    [HttpGet("clients")]
+    [Authorize]
+    public async Task<IActionResult> GetClients()
+    {
+        var clients = await _userRepository.GetClients();
+        if (clients == null)
+        {
+            _logger.LogError("[UserController] Client list not found while executing _userRepository.GetClients()");
+            return NotFound("Client list not found");
+        }
+        var clientDtos = clients.Select(UserDto.FromUser);
+        return Ok(clientDtos);
+    }
+
+    [HttpPost("create/client")]
+    public async Task<IActionResult> RegisterClient([FromBody] CreateUserDto newUserDto)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        var user = await _userRepository.GetUserByEmail(loginDto.Email);
-        if (user == null)
+        // Check if email already exists
+        var existingUser = await _userRepository.GetUserByEmail(newUserDto.Email);
+        if (existingUser != null)
         {
-            _logger.LogWarning("[UserController] Login attempt failed - user not found for email {Email}", loginDto.Email);
-            return Unauthorized("Invalid email or password");
+            _logger.LogWarning("[UserController] Email {Email} already exists", newUserDto.Email);
+            return BadRequest("Email already registered");
         }
 
-        // Verify password
-        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash);
-        if (!isPasswordValid)
-        {
-            _logger.LogWarning("[UserController] Login attempt failed - invalid password for email {Email}", loginDto.Email);
-            return Unauthorized("Invalid email or password");
-        }
+        // Hash the password
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(newUserDto.Password);
 
-        _logger.LogInformation("[UserController] User {UserId} logged in successfully", user.UserId);
-        return Ok(UserDto.FromUser(user));
+        // Create client
+        var newUser = new Client
+        {
+            Name = newUserDto.Name,
+            Adress = newUserDto.Adress,
+            Phone = newUserDto.Phone,
+            Email = newUserDto.Email,
+            PasswordHash = passwordHash,
+            ImageUrl = newUserDto.ImageUrl ?? string.Empty
+        };
+
+        await _userRepository.CreateUser(newUser);
+        _logger.LogInformation("[UserController] Client {Email} registered successfully", newUser.Email);
+
+        return CreatedAtAction(nameof(userDetails), new { userId = newUser.UserId }, UserDto.FromUser(newUser));
     }
 
-    [HttpGet("table")]
-    public async Task<IActionResult> Table()
+    [HttpPost("create/caregiver")]
+    [Authorize]
+    public async Task<IActionResult> CreateCaregiver([FromBody] CreateUserDto newUserDto)
     {
-        var users = await _userRepository.GetAll();
-        if (users == null)
+        if (!ModelState.IsValid)
         {
-            _logger.LogError("[UserController] User list not found while executing _userRepository.GetAll()");
-            return NotFound("User list not found");
+            return BadRequest(ModelState);
         }
-        var usersViewModel = new UsersViewModel(users, "Table");
-        return View(usersViewModel);
+
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (!Enum.TryParse<UserRole>(roleClaim, out var currentRole) || currentRole != UserRole.Admin)
+        {
+            _logger.LogWarning("[UserController] Non-admin user attempted to create caregiver");
+            return Forbid();
+        }
+
+        // Check if email already exists
+        var existingUser = await _userRepository.GetUserByEmail(newUserDto.Email);
+        if (existingUser != null)
+        {
+            _logger.LogWarning("[UserController] Email {Email} already exists", newUserDto.Email);
+            return BadRequest("Email already registered");
+        }
+
+        // Hash the password
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(newUserDto.Password);
+
+        // Create caregiver
+        var newUser = new Caregiver
+        {
+            Name = newUserDto.Name,
+            Adress = newUserDto.Adress,
+            Phone = newUserDto.Phone,
+            Email = newUserDto.Email,
+            PasswordHash = passwordHash,
+            ImageUrl = newUserDto.ImageUrl ?? string.Empty
+        };
+
+        await _userRepository.CreateUser(newUser);
+        _logger.LogInformation("[UserController] Caregiver {Email} created successfully by admin", newUser.Email);
+
+        return CreatedAtAction(nameof(userDetails), new { userId = newUser.UserId }, UserDto.FromUser(newUser));
     }
 
-    [HttpGet("{userId:int}")]
-    public async Task<IActionResult> userDetails(int userId)
+    [HttpPost("create/admin")]
+    [Authorize]
+    public async Task<IActionResult> CreateAdmin([FromBody] CreateUserDto newUserDto)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (!Enum.TryParse<UserRole>(roleClaim, out var currentRole) || currentRole != UserRole.Admin)
+        {
+            _logger.LogWarning("[UserController] Non-admin user attempted to create admin");
+            return Forbid();
+        }
+
+        // Check if email already exists
+        var existingUser = await _userRepository.GetUserByEmail(newUserDto.Email);
+        if (existingUser != null)
+        {
+            _logger.LogWarning("[UserController] Email {Email} already exists", newUserDto.Email);
+            return BadRequest("Email already registered");
+        }
+
+        // Hash the password
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(newUserDto.Password);
+
+        // Create admin user (using Client as base since we don't have Admin-specific class)
+        var newUser = new Client
+        {
+            Name = newUserDto.Name,
+            Adress = newUserDto.Adress,
+            Phone = newUserDto.Phone,
+            Email = newUserDto.Email,
+            PasswordHash = passwordHash,
+            ImageUrl = newUserDto.ImageUrl ?? string.Empty,
+            Role = UserRole.Admin
+        };
+
+        await _userRepository.CreateUser(newUser);
+        _logger.LogInformation("[UserController] Admin {Email} created successfully", newUser.Email);
+
+        return CreatedAtAction(nameof(userDetails), new { userId = newUser.UserId }, UserDto.FromUser(newUser));
+    }
+
+    [HttpPut("update/{userId:int}")]
+    [Authorize]
+    public async Task<IActionResult> UpdateUser(int userId, [FromBody] CreateUserDto updateDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+        {
+            _logger.LogError("[UserController] Unable to get user ID from JWT claims");
+            return Unauthorized("Invalid token");
+        }
+
+        if (!Enum.TryParse<UserRole>(roleClaim, out var currentRole))
+        {
+            return Unauthorized("Invalid role");
+        }
+
+        // Users can only update their own profile unless they're admin
+        if (currentRole != UserRole.Admin && userId != currentUserId)
+        {
+            _logger.LogWarning("[UserController] User {CurrentUserId} attempted to update user {UserId}", currentUserId, userId);
+            return Forbid();
+        }
+
         var user = await _userRepository.GetUserById(userId);
         if (user == null)
         {
-            _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", userId);
+            _logger.LogError("[UserController] User not found for UserId {UserId}", userId);
             return NotFound("User not found");
         }
-        return Ok(UserDto.FromUser(user));
-    }
 
-    [HttpGet("details/{userId:int}")]
-    public async Task<IActionResult> Details(int userId)
-    {
-        var user = await _userRepository.GetUserById(userId);
-        if (user == null)
+        // Check if email is being changed to an existing email
+        if (user.Email != updateDto.Email)
         {
-            _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", userId);
-            return NotFound("User not found");
-        }
-        return View(user);
-    }
-
-    [HttpGet("create")]
-    public IActionResult Create()
-    {
-        return View();
-    }
-
-    [HttpPost("create/new")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(CreateUserDto userDto)
-    {
-        if (ModelState.IsValid)
-        {
-            // Hash the password before creating the user
-            var user = new User
+            var existingUser = await _userRepository.GetUserByEmail(updateDto.Email);
+            if (existingUser != null)
             {
-                Name = userDto.Name,
-                Role = userDto.Role,
-                Adress = userDto.Adress,
-                Phone = userDto.Phone,
-                Email = userDto.Email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(userDto.Password),
-                ImageUrl = userDto.ImageUrl
-            };
-
-            bool returnOk = await _userRepository.CreateUser(user);
-            if (returnOk)
-                return RedirectToAction(nameof(Table));
+                _logger.LogWarning("[UserController] Email {Email} already exists", updateDto.Email);
+                return BadRequest("Email already registered");
+            }
         }
-        _logger.LogWarning("[UserController] user creation failed {@userDto}", userDto);
-        return View(userDto);
+
+        // Update user properties
+        user.Name = updateDto.Name;
+        user.Adress = updateDto.Adress;
+        user.Phone = updateDto.Phone;
+        user.Email = updateDto.Email;
+        user.ImageUrl = updateDto.ImageUrl ?? user.ImageUrl;
+
+        // Update password if provided
+        if (!string.IsNullOrEmpty(updateDto.Password))
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(updateDto.Password);
+        }
+
+        await _userRepository.UpdateUser(user);
+        _logger.LogInformation("[UserController] User {UserId} updated successfully", userId);
+
+        return Ok(UserDto.FromUser(user));
     }
 
-    [HttpGet("update/{id:int}")]
-    public async Task<IActionResult> Update(int id)
+    [HttpDelete("delete/{userId:int}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteUser(int userId)
     {
-        var user = await _userRepository.GetUserById(id);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+        {
+            _logger.LogError("[UserController] Unable to get user ID from JWT claims");
+            return Unauthorized("Invalid token");
+        }
+
+        if (!Enum.TryParse<UserRole>(roleClaim, out var currentRole))
+        {
+            return Unauthorized("Invalid role");
+        }
+
+        // Users can only delete their own account unless they're admin
+        if (currentRole != UserRole.Admin && userId != currentUserId)
+        {
+            _logger.LogWarning("[UserController] User {CurrentUserId} attempted to delete user {UserId}", currentUserId, userId);
+            return Forbid();
+        }
+
+        var user = await _userRepository.GetUserById(userId);
         if (user == null)
         {
-            _logger.LogError("[UserController] User not found when updating the UserId {UserId:0000}", id);
-            return BadRequest("User not found");
+            _logger.LogError("[UserController] User not found for UserId {UserId}", userId);
+            return NotFound("User not found");
         }
-        return View(user);
-    }
 
-    [HttpPost("update")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update(User user)
-    {
-        if (ModelState.IsValid)
+        try
         {
-            bool returnOk = await _userRepository.UpdateUser(user);
-            if (returnOk)
-                return RedirectToAction(nameof(Table));
-        }
-        _logger.LogWarning("[UserController] User Update failed {@user}", user);
-        return View(user);
-    }
+            bool success = await _userRepository.DeleteUser(userId);
+            if (success)
+            {
+                _logger.LogInformation("[UserController] User {UserId} deleted successfully", userId);
+                return Ok(new { message = "User deleted successfully" });
+            }
 
-    [HttpGet("delete/{id:int}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var user = await _userRepository.GetUserById(id);
-        if (user == null)
-        {
-            _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", id);
-            return BadRequest("User not found");
+            return BadRequest("Failed to delete user");
         }
-        return View(user);
-    }
-
-    [HttpPost("delete/{id:int}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
-    {
-        bool returnOk = await _userRepository.DeleteUser(id);
-        if (!returnOk)
+        catch (Exception ex)
         {
-            _logger.LogError("[UserController] User deletion failed for the UserId {UserId:0000}", id);
-            return BadRequest("User deletion failed");
+            _logger.LogError("[UserController] Failed to delete user {UserId}: {Error}", userId, ex.Message);
+            return BadRequest("Unable to delete user. Please try again.");
         }
-        return RedirectToAction(nameof(Table));
     }
 }
