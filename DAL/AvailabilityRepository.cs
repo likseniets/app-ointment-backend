@@ -35,7 +35,6 @@ public class AvailabilityRepository : IAvailabilityRepository
         try
         {
             return await _context.Availabilities
-                .Include(a => a.Caregiver)
                 .Where(a => a.CaregiverId == caregiverId)
                 .AsNoTracking()
                 .ToListAsync();
@@ -60,6 +59,41 @@ public class AvailabilityRepository : IAvailabilityRepository
         {
             _logger.LogError("[AvailabilityRepository] availability query failed when GetAvailabilityById() for AvailabilityId {AvailabilityId:0000}, error message: {e}", availabilityId, e.Message);
             return null;
+        }
+    }
+
+    public async Task<bool> AvailabilityExists(int caregiverId, DateTime date, string startTime, string endTime)
+    {
+        try
+        {
+            return await _context.Availabilities
+                .AnyAsync(a => a.CaregiverId == caregiverId
+                    && a.Date.Date == date.Date
+                    && a.StartTime == startTime
+                    && a.EndTime == endTime);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[AvailabilityRepository] availability exists check failed for CaregiverId {CaregiverId:0000}, error message: {e}", caregiverId, e.Message);
+            return false;
+        }
+    }
+
+    public async Task<bool> AvailabilityConflictExists(int availabilityId, int caregiverId, DateTime date, string startTime, string endTime)
+    {
+        try
+        {
+            return await _context.Availabilities
+                .AnyAsync(a => a.AvailabilityId != availabilityId
+                    && a.CaregiverId == caregiverId
+                    && a.Date.Date == date.Date
+                    && a.StartTime == startTime
+                    && a.EndTime == endTime);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[AvailabilityRepository] availability conflict check failed for AvailabilityId {AvailabilityId:0000}, error message: {e}", availabilityId, e.Message);
+            return false;
         }
     }
 

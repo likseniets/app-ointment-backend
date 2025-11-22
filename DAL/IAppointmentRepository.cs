@@ -10,4 +10,5 @@ public interface IAppointmentRepository
     Task<bool> UpdateAppointment(Appointment appointment);
     Task<bool> DeleteAppointment(int appointmentId);
     Task<IEnumerable<Appointment>?> GetClientAppointment(int id);
+    Task<IEnumerable<Appointment>?> GetCaregiverAppointments(int caregiverId);
 }

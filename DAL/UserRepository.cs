@@ -26,7 +26,38 @@ public class UserRepository : IUserRepository
             _logger.LogError("[UserRepository] users ToListAsync() failed when GetAll(), error message: {e}", e.Message);
             return null;
         }
-        
+
+    }
+
+    public async Task<IEnumerable<Caregiver>?> GetCaregivers()
+    {
+        try
+        {
+            return await _context.Caregivers
+                .Where(c => c.Role == UserRole.Caregiver)
+                .Include(c => c.Availability)
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] caregivers query failed when GetCaregivers(), error message: {e}", e.Message);
+            return null;
+        }
+    }
+
+    public async Task<IEnumerable<Client>?> GetClients()
+    {
+        try
+        {
+            return await _context.Clients
+                .Where(c => c.Role == UserRole.Client)
+                .ToListAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] clients query failed when GetClients(), error message: {e}", e.Message);
+            return null;
+        }
     }
 
     public async Task<User?> GetUserById(int id)
@@ -40,7 +71,51 @@ public class UserRepository : IUserRepository
         {
             _logger.LogError("[UserRepository] users FindAsync(id) failed when GetUserById() for UserId {UserId:0000}, error message: {e}", id, e.Message);
             return null;
-        }   
+        }
+    }
+
+    public async Task<User?> GetUserByEmail(string email)
+    {
+        try
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] users FirstOrDefaultAsync() failed when GetUserByEmail() for Email {Email}, error message: {e}", email, e.Message);
+            return null;
+        }
+    }
+
+    public async Task<Caregiver?> GetCaregiverWithAvailability(int caregiverId)
+    {
+        try
+        {
+            return await _context.Caregivers
+                .Include(c => c.Availability)
+                .FirstOrDefaultAsync(c => c.UserId == caregiverId && c.Role == UserRole.Caregiver);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] caregiver query failed when GetCaregiverWithAvailability() for CaregiverId {CaregiverId:0000}, error message: {e}", caregiverId, e.Message);
+            return null;
+        }
+    }
+
+    public async Task<Caregiver?> GetFirstCaregiver()
+    {
+        try
+        {
+            return await _context.Caregivers
+                .Include(c => c.Availability)
+                .FirstOrDefaultAsync(c => c.Role == UserRole.Caregiver);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[UserRepository] caregiver query failed when GetFirstCaregiver(), error message: {e}", e.Message);
+            return null;
+        }
     }
 
     public async Task<bool> CreateUser(User user)
@@ -49,8 +124,8 @@ public class UserRepository : IUserRepository
         {
             var entity = user.Role switch
             {
-                UserRole.Caregiver => new Caregiver { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role },
-                UserRole.Client => new Client { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role },
+                UserRole.Caregiver => new Caregiver { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role, PasswordHash = user.PasswordHash, ImageUrl = user.ImageUrl },
+                UserRole.Client => new Client { Name = user.Name, Adress = user.Adress, Phone = user.Phone, Email = user.Email, Role = user.Role, PasswordHash = user.PasswordHash, ImageUrl = user.ImageUrl },
                 _ => user
             };
             _context.Add(entity);
@@ -62,7 +137,7 @@ public class UserRepository : IUserRepository
             _logger.LogError("[UserRepository] user creation failed for user {@user}, error message: {e}", user, e.Message);
             return false;
         }
-        
+
     }
 
     public async Task<bool> UpdateUser(User user)
@@ -99,8 +174,8 @@ public class UserRepository : IUserRepository
         catch (Exception e)
         {
             _logger.LogError("[UserRepository] user deletion failed for UserId {UserId:0000}, error message: {e}", id, e.Message);
-                return false;
+            return false;
         }
-        
+
     }
 }
