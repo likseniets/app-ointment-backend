@@ -224,7 +224,7 @@ public class UserController : Controller
 
     [HttpPut("update/{userId:int}")]
     [Authorize]
-    public async Task<IActionResult> UpdateUser(int userId, [FromBody] CreateUserDto updateDto)
+    public async Task<IActionResult> UpdateUser(int userId, [FromBody] UpdateUserDto updateDto)
     {
         if (!ModelState.IsValid)
         {
@@ -277,16 +277,50 @@ public class UserController : Controller
         user.Email = updateDto.Email;
         user.ImageUrl = updateDto.ImageUrl ?? user.ImageUrl;
 
-        // Update password if provided
-        if (!string.IsNullOrEmpty(updateDto.Password))
-        {
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(updateDto.Password);
-        }
-
         await _userRepository.UpdateUser(user);
         _logger.LogInformation("[UserController] User {UserId} updated successfully", userId);
 
         return Ok(UserDto.FromUser(user));
+    }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        {
+            _logger.LogError("[UserController] Unable to get user ID from JWT claims");
+            return Unauthorized("Invalid token");
+        }
+
+        var user = await _userRepository.GetUserById(userId);
+        if (user == null)
+        {
+            _logger.LogError("[UserController] User not found for UserId {UserId}", userId);
+            return NotFound("User not found");
+        }
+
+        // Verify current password
+        bool isCurrentPasswordValid = BCrypt.Net.BCrypt.Verify(changePasswordDto.CurrentPassword, user.PasswordHash);
+        if (!isCurrentPasswordValid)
+        {
+            _logger.LogWarning("[UserController] Invalid current password for user {UserId}", userId);
+            return BadRequest("Current password is incorrect");
+        }
+
+        // Update to new password
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
+
+        await _userRepository.UpdateUser(user);
+        _logger.LogInformation("[UserController] Password changed successfully for user {UserId}", userId);
+
+        return Ok(new { message = "Password changed successfully" });
     }
 
     [HttpDelete("delete/{userId:int}")]

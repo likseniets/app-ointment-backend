@@ -175,8 +175,7 @@ public class AppointmentController : Controller
                 Date = appointmentDate,
                 CaregiverId = availability.CaregiverId,
                 ClientId = appointmentDto.ClientId,
-                Location = appointmentDto.Location,
-                Description = appointmentDto.Description
+                Task = appointmentDto.Task
             };
 
             bool created = await _appointmentRepository.CreateAppointment(appointment);
@@ -243,9 +242,8 @@ public class AppointmentController : Controller
             return Forbid();
         }
 
-        // Update appointment properties
-        appointment.Location = updateDto.Location;
-        appointment.Description = updateDto.Description;
+        // Update appointment task
+        appointment.Task = updateDto.Task;
 
         try
         {

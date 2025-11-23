@@ -101,6 +101,7 @@ builder.Services.AddDbContext<UserDbContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 builder.Services.AddScoped<IAvailabilityRepository, AvailabilityRepository>();
+builder.Services.AddScoped<IChangeRequestRepository, ChangeRequestRepository>();
 
 // Services
 builder.Services.AddScoped<IJwtService, JwtService>();

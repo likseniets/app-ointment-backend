@@ -1,7 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 namespace app_ointment_backend.Models;
 
-public enum UserRole { Caregiver = 1, Client = 2, Admin = 3 }
+public enum UserRole
+{
+    Caregiver,
+    Client,
+    Admin
+}
 public class User
 {
     public int UserId { get; set; }
@@ -27,4 +32,17 @@ public class User
 
     public string? ImageUrl { get; set; }
 
+}
+
+public class Client : User
+{
+    public int ClientId { get; set; }
+    public virtual List<Appointment>? Appointments { get; set; }
+}
+
+public class Caregiver : User
+{
+    public int CaregiverId { get; set; }
+    public virtual List<Appointment>? Appointments { get; set; }
+    public virtual List<Availability>? Availability { get; set; }
 }

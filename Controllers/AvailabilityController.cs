@@ -63,7 +63,7 @@ public class AvailabilityController : Controller
 
     // GET: api/Availability/caregiver/{caregiverId}
     // Returns only the availabilities for the specified caregiver
-    [HttpGet("caregiver/{caregiverId}")]
+    [HttpGet("{caregiverId}")]
     [Authorize]
     public async Task<IActionResult> GetAvailabilitiesByCaregiver(int caregiverId)
     {
@@ -78,46 +78,6 @@ public class AvailabilityController : Controller
             .ThenBy(a => a.StartTime)
             .Select(AvailabilityDto.FromAvailability);
         return Ok(availabilityDtos);
-    }
-
-    // GET: Availability/Manage/{caregiverId}
-    // If caregiverId is not provided or is 0, show the first caregiver found.
-    [HttpGet("{caregiverId?}")]
-    public async Task<IActionResult> Manage(int? caregiverId)
-    {
-        Caregiver? caregiver = null;
-
-        var roleInt = HttpContext.Session.GetInt32("CurrentUserRole");
-        var userId = HttpContext.Session.GetInt32("CurrentUserId");
-        var isCaregiver = roleInt.HasValue && (UserRole)roleInt.Value == UserRole.Caregiver;
-
-        // If caregiver is logged in, always show their own availability
-        if (isCaregiver && userId.HasValue)
-        {
-            caregiverId = userId.Value;
-        }
-
-        if (caregiverId.HasValue && caregiverId.Value > 0)
-        {
-            caregiver = await _userRepository.GetCaregiverWithAvailability(caregiverId.Value);
-        }
-        else
-        {
-            caregiver = await _userRepository.GetFirstCaregiver();
-        }
-
-        if (caregiver == null)
-        {
-            _logger.LogError("[AvailabilityController] Caregiver not found for Id {CaregiverId}", caregiverId ?? 0);
-            // No caregiver available — redirect to the users table so the user can create one.
-            return BadRequest("Caregiver not found");
-        }
-
-        // Also load this caregiver's booked appointments for display
-        var appts = await _appointmentRepository.GetCaregiverAppointments(caregiver.UserId);
-        ViewBag.CaregiverAppointments = appts ?? new List<Appointment>();
-
-        return Ok(caregiver);
     }
 
     // POST: Availability/Create

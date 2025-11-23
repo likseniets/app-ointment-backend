@@ -24,39 +24,48 @@ public static class DBInit
             {
                 new User
                 {
-                    Name = "Artur",
+                    Name = "Admin1",
                     Role = UserRole.Admin,
-                    Adress = "Bever 8",
-                    Email = "s371452@oslomet.no",
+                    Adress = "Eksempelveien 1",
+                    Email = "admin@example.com",
                     Phone = "46213657",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
                 },
                 new Caregiver
                 {
-                    Name = "Jesper",
+                    Name = "Caregiver1",
                     Role = UserRole.Caregiver,
-                    Adress = "Bislett",
-                    Email = "jemel7762@oslomet.no",
+                    Adress = "Bislett gate 1",
+                    Email = "caregiver1@example.com",
                     Phone = "82888222",
                     ImageUrl = "https://media.istockphoto.com/id/1919265357/photo/close-up-portrait-of-confident-businessman-standing-in-office.jpg?s=2048x2048&w=is&k=20&c=b31q8IXUnas7j0DCl8eMrAWMVj8YG14cP7lw5eF8TrQ=",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
                 },
                 new Caregiver
                 {
-                    Name = "Kjos",
+                    Name = "Caregiver2",
                     Role = UserRole.Caregiver,
                     Adress = "Gingertown",
-                    Email = "s371393@oslomet.no",
-                    Phone = "82888222",
+                    Email = "caregiver2@example.com",
+                    Phone = "82889322",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
                 },
                 new Client
                 {
-                    Name = "Eskil",
+                    Name = "Client1",
                     Role = UserRole.Client,
                     Adress = "Gokk",
-                    Email = "s371414@oslomet.no",
+                    Email = "client1@example.com",
                     Phone = "99884432",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
+                },
+                new Client
+                {
+                    Name = "Client2",
+                    Role = UserRole.Client,
+                    Adress = "Gokk",
+                    Email = "client2@example.com",
+                    Phone = "98912313",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123")
                 }
             };
@@ -66,17 +75,6 @@ public static class DBInit
             context.SaveChanges();
         }
 
-        //if (!context.Customers.Any())
-        //{
-        //    var customers = new List<Customer>
-        //    {
-        //        new Customer { Name = "Alice Hansen", Address = "Osloveien 1"},
-        //        new Customer { Name = "Bob Johansen", Address = "Oslomet gata 2"},
-        //    };
-        //    context.AddRange(customers);
-        //    context.SaveChanges();
-        //}
-
         if (!context.Appointments.Any())
         {
             var caregiver = context.Users.FirstOrDefault(u => u.Role == UserRole.Caregiver);
@@ -84,17 +82,25 @@ public static class DBInit
 
             if (caregiver != null && client != null)
             {
-                var appointment = new Appointment
+                var appointment1 = new Appointment
                 {
-                    Date = DateTime.Now,
+                    Date = DateTime.Now.AddDays(1),
                     ClientId = client.UserId,
                     CaregiverId = caregiver.UserId,
-                    Location = "Home",
-                    Description = "Initial appointment"
+                    Task = AppointmentTask.AssistanceWithDailyLiving
+                };
+
+                var appointment2 = new Appointment
+                {
+                    Date = DateTime.Now.AddDays(2),
+                    ClientId = client.UserId,
+                    CaregiverId = caregiver.UserId,
+                    Task = AppointmentTask.PersonalHygiene
                 };
 
                 // Insert appointment directly so it's immediately available
-                context.Appointments.Add(appointment);
+                context.Appointments.Add(appointment1);
+                context.Appointments.Add(appointment2);
                 context.SaveChanges();
             }
         }
@@ -108,22 +114,22 @@ public static class DBInit
                 var startDate = DateTime.Today;
                 var availabilities = new List<Availability>();
                 var random = new Random();
-                
-                // Jesper - Available Monday, Wednesday, Friday with varying hours
-                var jesper = caregivers.FirstOrDefault(c => c.Name == "Jesper");
-                if (jesper != null)
+
+                // Caregiver2 - Available Monday, Wednesday, Friday with varying hours
+                var caregiver1 = caregivers.FirstOrDefault(c => c.Name == "Caregiver1");
+                if (caregiver1 != null)
                 {
                     for (int i = 0; i < 14; i++) // 2 weeks
                     {
                         var date = startDate.AddDays(i);
-                        if (date.DayOfWeek == DayOfWeek.Monday || 
-                            date.DayOfWeek == DayOfWeek.Wednesday || 
+                        if (date.DayOfWeek == DayOfWeek.Monday ||
+                            date.DayOfWeek == DayOfWeek.Wednesday ||
                             date.DayOfWeek == DayOfWeek.Friday)
                         {
                             // Random start hour between 8-10, random end hour between 16-18
                             var startHour = random.Next(8, 11);
                             var endHour = random.Next(16, 19);
-                            
+
                             for (var hour = startHour; hour < endHour; hour++)
                             {
                                 // Randomly skip some slots (70% chance to include)
@@ -131,7 +137,7 @@ public static class DBInit
                                 {
                                     availabilities.Add(new Availability
                                     {
-                                        CaregiverId = jesper.UserId,
+                                        CaregiverId = caregiver1.UserId,
                                         Date = date,
                                         StartTime = new TimeSpan(hour, 0, 0).ToString(@"hh\:mm"),
                                         EndTime = new TimeSpan(hour + 1, 0, 0).ToString(@"hh\:mm")
@@ -142,20 +148,20 @@ public static class DBInit
                     }
                 }
 
-                // Kjos - Available Tuesday, Thursday with varying hours
-                var kjos = caregivers.FirstOrDefault(c => c.Name == "Kjos");
-                if (kjos != null)
+                // caregiver2/ - Available Tuesday, Thursday with varying hours
+                var caregiver2 = caregivers.FirstOrDefault(c => c.Name == "Caregiver2");
+                if (caregiver2 != null)
                 {
                     for (int i = 0; i < 14; i++) // 2 weeks
                     {
                         var date = startDate.AddDays(i);
-                        if (date.DayOfWeek == DayOfWeek.Tuesday || 
+                        if (date.DayOfWeek == DayOfWeek.Tuesday ||
                             date.DayOfWeek == DayOfWeek.Thursday)
                         {
                             // Random start hour between 9-11, random end hour between 15-18
                             var startHour = random.Next(9, 12);
                             var endHour = random.Next(15, 19);
-                            
+
                             for (var hour = startHour; hour < endHour; hour++)
                             {
                                 // Randomly skip some slots (80% chance to include)
@@ -163,7 +169,7 @@ public static class DBInit
                                 {
                                     availabilities.Add(new Availability
                                     {
-                                        CaregiverId = kjos.UserId,
+                                        CaregiverId = caregiver2.UserId,
                                         Date = date,
                                         StartTime = new TimeSpan(hour, 0, 0).ToString(@"hh\:mm"),
                                         EndTime = new TimeSpan(hour + 1, 0, 0).ToString(@"hh\:mm")
@@ -175,7 +181,7 @@ public static class DBInit
                 }
 
                 // Add any other caregivers with varied schedule (Mon-Fri with random hours)
-                var otherCaregivers = caregivers.Where(c => c.Name != "Jesper" && c.Name != "Kjos");
+                var otherCaregivers = caregivers.Where(c => c.Name != "Caregiver1" && c.Name != "Caregiver2");
                 foreach (var cg in otherCaregivers)
                 {
                     for (int i = 0; i < 14; i++)
@@ -186,7 +192,7 @@ public static class DBInit
                             // Random start hour between 7-10, random end hour between 14-17
                             var startHour = random.Next(7, 11);
                             var endHour = random.Next(14, 18);
-                            
+
                             for (var hour = startHour; hour < endHour; hour++)
                             {
                                 // Randomly skip some slots (75% chance to include)
@@ -209,23 +215,83 @@ public static class DBInit
                 context.SaveChanges();
             }
         }
-    }
 
-    /*        if (!context.OrderItems.Any())
+        // Seed a mock pending change request
+        if (!context.AppointmentChangeRequests.Any())
+        {
+            var appointment = context.Appointments.FirstOrDefault();
+
+            if (appointment != null)
             {
-                var orderItems = new List<OrderItem>
+                // Find an available slot for the change request (use an existing availability slot)
+                var availableSlot = context.Availabilities
+                    .Where(a => a.CaregiverId == appointment.CaregiverId && a.Date > DateTime.Now)
+                    .OrderBy(a => a.Date)
+                    .FirstOrDefault();
+
+                DateTime? newDateTime = null;
+                if (availableSlot != null)
                 {
-                    new OrderItem { ItemId = 1, Quantity = 2, OrderId = 1},
-                    new OrderItem { ItemId = 2, Quantity = 1, OrderId = 1},
-                    new OrderItem { ItemId = 3, Quantity = 4, OrderId = 2},
-                };
-                foreach (var orderItem in orderItems)
-                {
-                    var item = context.Items.Find(orderItem.ItemId);
-                    orderItem.OrderItemPrice = orderItem.Quantity * item?.Price ?? 0;
+                    // Parse the time from the availability slot
+                    var timeParts = availableSlot.StartTime.Split(':');
+                    if (timeParts.Length >= 2 && int.TryParse(timeParts[0], out int hour))
+                    {
+                        newDateTime = availableSlot.Date.Date.AddHours(hour);
+                    }
                 }
-                context.AddRange(orderItems);
+
+                var changeRequest1 = new AppointmentChangeRequest
+                {
+                    AppointmentId = appointment.AppointmentId,
+                    RequestedByUserId = appointment.ClientId,
+                    OldTask = appointment.Task,
+                    OldDateTime = appointment.Date,
+                    NewTask = AppointmentTask.MedicationReminders,
+                    NewDateTime = newDateTime, // Use an actual available timeslot
+                    Status = ChangeRequestStatus.Pending,
+                    RequestedAt = DateTime.UtcNow
+                };
+
+                context.AppointmentChangeRequests.Add(changeRequest1);
+
+                // Create a second change request for the second appointment (if it exists)
+                var appointment2 = context.Appointments.Skip(1).FirstOrDefault();
+                if (appointment2 != null)
+                {
+                    // Find an available slot for the second change request
+                    var availableSlot2 = context.Availabilities
+                        .Where(a => a.CaregiverId == appointment2.CaregiverId && a.Date > DateTime.Now)
+                        .OrderBy(a => a.Date)
+                        .Skip(1) // Skip the first slot to get a different one
+                        .FirstOrDefault();
+
+                    DateTime? newDateTime2 = null;
+                    if (availableSlot2 != null)
+                    {
+                        var timeParts2 = availableSlot2.StartTime.Split(':');
+                        if (timeParts2.Length >= 2 && int.TryParse(timeParts2[0], out int hour2))
+                        {
+                            newDateTime2 = availableSlot2.Date.Date.AddHours(hour2);
+                        }
+                    }
+
+                    var changeRequest2 = new AppointmentChangeRequest
+                    {
+                        AppointmentId = appointment2.AppointmentId,
+                        RequestedByUserId = appointment2.CaregiverId,
+                        OldTask = appointment2.Task,
+                        OldDateTime = appointment2.Date,
+                        NewTask = AppointmentTask.Companionship,
+                        NewDateTime = newDateTime2,
+                        Status = ChangeRequestStatus.Pending,
+                        RequestedAt = DateTime.UtcNow
+                    };
+
+                    context.AppointmentChangeRequests.Add(changeRequest2);
+                }
+
                 context.SaveChanges();
             }
-    */
+        }
+    }
 }

@@ -90,7 +90,7 @@ public class AppointmentRepository : IAppointmentRepository
     {
         try
         {
-            _context.Appointments.Update(appointment);
+            _context.Entry(appointment).State = EntityState.Modified;
             await _context.SaveChangesAsync();
             return true;
         }

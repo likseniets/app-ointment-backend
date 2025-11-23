@@ -15,6 +15,7 @@ public class UserDbContext : DbContext
 	public DbSet<Caregiver> Caregivers { get; set; }
 	public DbSet<Appointment> Appointments { get; set; }
 	public DbSet<Availability> Availabilities { get; set; }
+	public DbSet<AppointmentChangeRequest> AppointmentChangeRequests { get; set; }
 
 	protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 	{
@@ -41,6 +42,25 @@ public class UserDbContext : DbContext
 		// Ignore derived-type collection navigations that conflict with the above
 		modelBuilder.Entity<Caregiver>().Ignore(c => c.Appointments);
 		modelBuilder.Entity<Client>().Ignore(c => c.Appointments);
+
+		// Configure AppointmentChangeRequest relationships
+		modelBuilder.Entity<AppointmentChangeRequest>()
+			.HasOne(cr => cr.Appointment)
+			.WithMany()
+			.HasForeignKey(cr => cr.AppointmentId)
+			.OnDelete(DeleteBehavior.Cascade);
+
+		modelBuilder.Entity<AppointmentChangeRequest>()
+			.HasOne(cr => cr.RequestedByUser)
+			.WithMany()
+			.HasForeignKey(cr => cr.RequestedByUserId)
+			.OnDelete(DeleteBehavior.NoAction);
+
+		modelBuilder.Entity<AppointmentChangeRequest>()
+			.HasOne(cr => cr.RespondedByUser)
+			.WithMany()
+			.HasForeignKey(cr => cr.RespondedByUserId)
+			.OnDelete(DeleteBehavior.NoAction);
 	}
 }
 
