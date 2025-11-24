@@ -145,17 +145,14 @@ public class AvailabilityController : Controller
                     ModelState.AddModelError(string.Empty, "End time must be after start time");
                     return BadRequest(ModelState);
                 }
-                if (startTs.Minutes != 0 || endTs.Minutes != 0)
-                {
-                    ModelState.AddModelError(string.Empty, "Times must be on the hour (e.g., 09:00)");
-                    return BadRequest(ModelState);
-                }
 
                 var created = 0;
-                for (var t = startTs; t + TimeSpan.FromHours(1) <= endTs; t += TimeSpan.FromHours(1))
+                var slotLength = TimeSpan.FromMinutes(availabilityDto.SlotLengthMinutes);
+                // Create as many slots as possible, ignoring any remaining time that doesn't fit a full slot
+                for (var t = startTs; t + slotLength <= endTs; t += slotLength)
                 {
-                    var slotStart = new TimeSpan(t.Hours, 0, 0).ToString(@"hh\:mm");
-                    var slotEnd = new TimeSpan((t + TimeSpan.FromHours(1)).Hours, 0, 0).ToString(@"hh\:mm");
+                    var slotStart = t.ToString(@"hh\:mm");
+                    var slotEnd = (t + slotLength).ToString(@"hh\:mm");
                     bool exists = await _availabilityRepository.AvailabilityExists(availabilityDto.CaregiverId, availabilityDto.Date.Date, slotStart, slotEnd);
                     if (exists) continue;
                     var slot = new Availability
@@ -236,11 +233,6 @@ public class AvailabilityController : Controller
         if (startTs >= endTs)
         {
             return BadRequest("End time must be after start time");
-        }
-
-        if (startTs.Minutes != 0 || endTs.Minutes != 0)
-        {
-            return BadRequest("Times must be on the hour (e.g., 09:00)");
         }
 
         var slotStart = new TimeSpan(startTs.Hours, 0, 0).ToString(@"hh\:mm");
