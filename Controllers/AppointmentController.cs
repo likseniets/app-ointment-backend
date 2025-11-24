@@ -34,7 +34,7 @@ public class AppointmentController : Controller
 
     [HttpGet]
     [Authorize]
-    public async Task<ActionResult<IEnumerable<Appointment>>> GetAll()
+    public async Task<ActionResult<IEnumerable<Appointment>>> GetSpecified()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
@@ -86,6 +86,21 @@ public class AppointmentController : Controller
 
         var allAppointmentDtos = appointments.Select(AppointmentDto.FromAppointment);
         return Ok(allAppointmentDtos);
+    }
+
+    [HttpGet("all")]
+    [Authorize]
+    public async Task<IActionResult> GetAll()
+    {
+        var appointments = await _appointmentRepository.GetAll();
+        if (appointments == null)
+        {
+            _logger.LogError("[AppointmentController] Appointment list not found while executing _appointmentRepository.GetAll()");
+            return NotFound("Appointment list not found");
+        }
+
+        var appointmentDtos = appointments.Select(AppointmentDto.FromAppointment);
+        return Ok(appointmentDtos);
     }
 
     [HttpGet("byclient/{clientId:int}")]

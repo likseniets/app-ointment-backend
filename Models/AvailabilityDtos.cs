@@ -9,6 +9,7 @@ public class AvailabilityDto
     public string StartTime { get; set; } = string.Empty;
     public string EndTime { get; set; } = string.Empty;
     public int CaregiverId { get; set; }
+    public string CaregiverName { get; set; } = string.Empty;
 
     public static AvailabilityDto FromAvailability(Availability availability)
     {
@@ -18,7 +19,8 @@ public class AvailabilityDto
             Date = availability.Date,
             StartTime = availability.StartTime,
             EndTime = availability.EndTime,
-            CaregiverId = availability.CaregiverId
+            CaregiverId = availability.CaregiverId,
+            CaregiverName = availability.Caregiver.Name
         };
     }
 }

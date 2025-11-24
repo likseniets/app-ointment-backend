@@ -61,6 +61,23 @@ public class AvailabilityController : Controller
         return BadRequest("Not a caregiver");
     }
 
+    [HttpGet("all")]
+    [Authorize]
+    public async Task<IActionResult> GetAllAvailabilities()
+    {
+        var availabilities = await _availabilityRepository.GetAll();
+        if (availabilities == null)
+        {
+            _logger.LogError("[AvailabilityController] Failed to get all availabilities");
+            return NotFound("Availabilities not found");
+        }
+        var availabilityDtos = availabilities
+            .OrderBy(a => a.Date)
+            .ThenBy(a => a.StartTime)
+            .Select(AvailabilityDto.FromAvailability);
+        return Ok(availabilityDtos);
+    }
+
     // GET: api/Availability/caregiver/{caregiverId}
     // Returns only the availabilities for the specified caregiver
     [HttpGet("{caregiverId}")]
