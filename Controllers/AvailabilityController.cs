@@ -5,51 +5,43 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
 using app_ointment_backend.Models;
-using app_ointment_backend.DAL;
+using app_ointment_backend.Services;
 
 namespace app_ointment_backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-
 public class AvailabilityController : Controller
 {
-    private readonly IAvailabilityRepository _availabilityRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IAppointmentRepository _appointmentRepository;
+    private readonly IAvailabilityService _availabilityService;
     private readonly ILogger<AvailabilityController> _logger;
 
     public AvailabilityController(
-        IAvailabilityRepository availabilityRepository,
-        IUserRepository userRepository,
-        IAppointmentRepository appointmentRepository,
+        IAvailabilityService availabilityService,
         ILogger<AvailabilityController> logger)
     {
-        _availabilityRepository = availabilityRepository;
-        _userRepository = userRepository;
-        _appointmentRepository = appointmentRepository;
+        _availabilityService = availabilityService;
         _logger = logger;
     }
 
-    // GET: api/Availability
-    // Returns availabilities for the logged-in caregiver (or all if not authenticated)
+    // HttpGet for getting availabilities for the current caregiver,
+    // uses claims from JWT to determine caregiver ID and role and return their availabilities
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<AvailabilityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAvailabilities()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
 
-        // If authenticated and is a caregiver, return only their availabilities
         if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId) &&
             Enum.TryParse<UserRole>(roleClaim, out var role) && role == UserRole.Caregiver)
         {
-            var availabilities = await _availabilityRepository.GetAvailabilityByCaregiver(userId);
+            var availabilities = await _availabilityService.GetAvailabilitiesByCaregiver(userId);
             if (availabilities == null)
             {
-                _logger.LogError("[AvailabilityController] Failed to get availabilities for caregiver {CaregiverId}", userId);
                 return NotFound("Availabilities not found");
             }
             var availabilityDtos = availabilities
@@ -61,14 +53,16 @@ public class AvailabilityController : Controller
         return BadRequest("Not a caregiver");
     }
 
+    // HttpGet for getting all availabilities, used by admins to fetch all availabilities
     [HttpGet("all")]
     [Authorize]
+    [ProducesResponseType(typeof(IEnumerable<AvailabilityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAllAvailabilities()
     {
-        var availabilities = await _availabilityRepository.GetAll();
+        var availabilities = await _availabilityService.GetAllAvailabilities();
         if (availabilities == null)
         {
-            _logger.LogError("[AvailabilityController] Failed to get all availabilities");
             return NotFound("Availabilities not found");
         }
         var availabilityDtos = availabilities
@@ -78,16 +72,16 @@ public class AvailabilityController : Controller
         return Ok(availabilityDtos);
     }
 
-    // GET: api/Availability/caregiver/{caregiverId}
-    // Returns only the availabilities for the specified caregiver
+    // HttpGet for getting availabilities by caregiver ID
     [HttpGet("{caregiverId}")]
     [Authorize]
+    [ProducesResponseType(typeof(IEnumerable<AvailabilityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAvailabilitiesByCaregiver(int caregiverId)
     {
-        var availabilities = await _availabilityRepository.GetAvailabilityByCaregiver(caregiverId);
+        var availabilities = await _availabilityService.GetAvailabilitiesByCaregiver(caregiverId);
         if (availabilities == null)
         {
-            _logger.LogError("[AvailabilityController] Failed to get availabilities for CaregiverId {CaregiverId:0000}", caregiverId);
             return NotFound("Availabilities not found");
         }
         var availabilityDtos = availabilities
@@ -97,99 +91,62 @@ public class AvailabilityController : Controller
         return Ok(availabilityDtos);
     }
 
-    // POST: Availability/Create
+    // HttpPost for creating availability slots
     [HttpPost("create")]
     [Authorize]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] CreateAvailabilityDto availabilityDto)
     {
-        if (ModelState.IsValid)
+        if (!ModelState.IsValid)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
-
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
-            {
-                return Unauthorized("Invalid token");
-            }
-
-            if (!Enum.TryParse<UserRole>(roleClaim, out var currentRole))
-            {
-                return Unauthorized("Invalid role");
-            }
-
-            // Only the caregiver themselves or an admin can create availability
-            if (currentRole != UserRole.Admin && availabilityDto.CaregiverId != currentUserId)
-            {
-                _logger.LogWarning("[AvailabilityController] User {UserId} attempted to create availability for caregiver {CaregiverId}", currentUserId, availabilityDto.CaregiverId);
-                return Forbid();
-            }
-
-            try
-            {
-                var caregiver = await _userRepository.GetUserById(availabilityDto.CaregiverId);
-
-                if (caregiver == null || caregiver.Role != UserRole.Caregiver)
-                {
-                    return NotFound("Caregiver not found");
-                }
-
-                // Parse range and split into 1-hour slots on the hour
-                if (!TimeSpan.TryParse(availabilityDto.StartTime, out var startTs) ||
-                    !TimeSpan.TryParse(availabilityDto.EndTime, out var endTs))
-                {
-                    ModelState.AddModelError(string.Empty, "Invalid time format. Please use HH:mm");
-                    return BadRequest(ModelState);
-                }
-                if (startTs >= endTs)
-                {
-                    ModelState.AddModelError(string.Empty, "End time must be after start time");
-                    return BadRequest(ModelState);
-                }
-
-                var created = 0;
-                var slotLength = TimeSpan.FromMinutes(availabilityDto.SlotLengthMinutes);
-                // Create as many slots as possible, ignoring any remaining time that doesn't fit a full slot
-                for (var t = startTs; t + slotLength <= endTs; t += slotLength)
-                {
-                    var slotStart = t.ToString(@"hh\:mm");
-                    var slotEnd = (t + slotLength).ToString(@"hh\:mm");
-                    bool exists = await _availabilityRepository.AvailabilityExists(availabilityDto.CaregiverId, availabilityDto.Date.Date, slotStart, slotEnd);
-                    if (exists) continue;
-                    var slot = new Availability
-                    {
-                        CaregiverId = availabilityDto.CaregiverId,
-                        Date = availabilityDto.Date.Date,
-                        StartTime = slotStart,
-                        EndTime = slotEnd
-                    };
-                    await _availabilityRepository.CreateAvailability(slot);
-                    created++;
-                }
-                if (created > 0)
-                {
-                    // Get updated list of availabilities for this caregiver
-                    var availabilities = await _availabilityRepository.GetAvailabilityByCaregiver(availabilityDto.CaregiverId);
-                    var availabilityDtos = availabilities?
-                        .OrderBy(a => a.Date)
-                        .ThenBy(a => a.StartTime)
-                        .Select(AvailabilityDto.FromAvailability) ?? Enumerable.Empty<AvailabilityDto>();
-                    return Ok(new { message = $"Created {created} slot(s)", count = created, availabilities = availabilityDtos });
-                }
-                return BadRequest(new { message = "No new slots created (may already exist)" });
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError("[AvailabilityController] Failed to create availability: {Error}", ex.Message);
-                return BadRequest(new { message = "Unable to save availability. Please try again." });
-            }
+            return BadRequest(ModelState);
         }
 
-        return BadRequest(ModelState);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+        {
+            return Unauthorized("Invalid token");
+        }
+
+        if (!Enum.TryParse<UserRole>(roleClaim, out var currentRole))
+        {
+            return Unauthorized("Invalid role");
+        }
+
+        if (currentRole != UserRole.Admin && availabilityDto.CaregiverId != currentUserId)
+        {
+            _logger.LogWarning("[AvailabilityController] User {UserId} attempted to create availability for caregiver {CaregiverId}", currentUserId, availabilityDto.CaregiverId);
+            return Forbid();
+        }
+
+        var (success, message, slotsCreated) = await _availabilityService.CreateAvailabilitySlots(availabilityDto);
+        
+        if (success)
+        {
+            var availabilities = await _availabilityService.GetAvailabilitiesByCaregiver(availabilityDto.CaregiverId);
+            var availabilityDtos = availabilities?
+                .OrderBy(a => a.Date)
+                .ThenBy(a => a.StartTime)
+                .Select(AvailabilityDto.FromAvailability) ?? Enumerable.Empty<AvailabilityDto>();
+            return Ok(new { message, count = slotsCreated, availabilities = availabilityDtos });
+        }
+
+        return BadRequest(new { message });
     }
 
-    // PUT: Availability/Update/{id}
+    // HttpPut for updating an availability
     [HttpPut("update/{id}")]
     [Authorize]
+    [ProducesResponseType(typeof(AvailabilityDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] CreateAvailabilityDto updateDto)
     {
         if (!ModelState.IsValid)
@@ -210,66 +167,44 @@ public class AvailabilityController : Controller
             return Unauthorized("Invalid role");
         }
 
-        var availability = await _availabilityRepository.GetAvailabilityById(id);
+        var availability = await _availabilityService.GetAvailabilityById(id);
         if (availability == null)
         {
             return NotFound("Availability not found");
         }
 
-        // Only the caregiver who owns the availability or an admin can update it
         if (currentRole != UserRole.Admin && availability.CaregiverId != currentUserId)
         {
             _logger.LogWarning("[AvailabilityController] User {UserId} attempted to update availability {AvailabilityId} owned by caregiver {CaregiverId}", currentUserId, id, availability.CaregiverId);
             return Forbid();
         }
 
-        // Parse and validate times
-        if (!TimeSpan.TryParse(updateDto.StartTime, out var startTs) ||
-            !TimeSpan.TryParse(updateDto.EndTime, out var endTs))
+        var updateAvailabilityDto = new UpdateAvailabilityDto
         {
-            return BadRequest("Invalid time format. Please use HH:mm");
+            Date = updateDto.Date,
+            StartTime = updateDto.StartTime,
+            EndTime = updateDto.EndTime
+        };
+
+        var (success, message) = await _availabilityService.UpdateAvailability(id, updateAvailabilityDto);
+        
+        if (success)
+        {
+            var updatedAvailability = await _availabilityService.GetAvailabilityById(id);
+            return Ok(updatedAvailability != null ? AvailabilityDto.FromAvailability(updatedAvailability) : null);
         }
 
-        if (startTs >= endTs)
-        {
-            return BadRequest("End time must be after start time");
-        }
-
-        var slotStart = new TimeSpan(startTs.Hours, 0, 0).ToString(@"hh\:mm");
-        var slotEnd = new TimeSpan(endTs.Hours, 0, 0).ToString(@"hh\:mm");
-
-        // Check if the new time slot conflicts with other availabilities (excluding current one)
-        bool conflicts = await _availabilityRepository.AvailabilityConflictExists(id, availability.CaregiverId, updateDto.Date.Date, slotStart, slotEnd);
-        if (conflicts)
-        {
-            return BadRequest("This time slot conflicts with an existing availability");
-        }
-
-        // Update the availability
-        availability.Date = updateDto.Date.Date;
-        availability.StartTime = slotStart;
-        availability.EndTime = slotEnd;
-
-        try
-        {
-            bool success = await _availabilityRepository.UpdateAvailability(availability);
-            if (success)
-            {
-                _logger.LogInformation("[AvailabilityController] Availability {AvailabilityId} updated successfully", id);
-                return Ok(AvailabilityDto.FromAvailability(availability));
-            }
-            return BadRequest("Failed to update availability");
-        }
-        catch (DbUpdateException ex)
-        {
-            _logger.LogError("[AvailabilityController] Failed to update availability {AvailabilityId}: {Error}", id, ex.Message);
-            return BadRequest("Unable to update availability. Please try again.");
-        }
+        return BadRequest(new { message });
     }
 
-    // DELETE: Availability/Delete/{id}
+    // HttpDelete for deleting an availability
     [HttpDelete("delete/{id}")]
     [Authorize]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -285,40 +220,31 @@ public class AvailabilityController : Controller
             return Unauthorized("Invalid role");
         }
 
-        var availability = await _availabilityRepository.GetAvailabilityById(id);
+        var availability = await _availabilityService.GetAvailabilityById(id);
         if (availability == null)
         {
             return NotFound("Availability not found");
         }
 
-        // Only the caregiver who owns the availability or an admin can delete it
         if (currentRole != UserRole.Admin && availability.CaregiverId != currentUserId)
         {
             _logger.LogWarning("[AvailabilityController] User {UserId} attempted to delete availability {AvailabilityId} owned by caregiver {CaregiverId}", currentUserId, id, availability.CaregiverId);
             return Forbid();
         }
 
-        try
+        var (success, message) = await _availabilityService.DeleteAvailability(id);
+        
+        if (success)
         {
-            bool success = await _availabilityRepository.DeleteAvailability(id);
-            if (success)
-            {
-                var availabilities = await _availabilityRepository.GetAvailabilityByCaregiver(availability.CaregiverId);
-                var availabilityDtos = availabilities?
-                    .OrderBy(a => a.Date)
-                    .ThenBy(a => a.StartTime)
-                    .Select(AvailabilityDto.FromAvailability) ?? Enumerable.Empty<AvailabilityDto>();
-                return Ok(new { message = $"Deleted slot(s)", count = availabilityDtos.Count(), availabilities = availabilityDtos });
+            var availabilities = await _availabilityService.GetAvailabilitiesByCaregiver(availability.CaregiverId);
+            var availabilityDtos = availabilities?
+                .OrderBy(a => a.Date)
+                .ThenBy(a => a.StartTime)
+                .Select(AvailabilityDto.FromAvailability) ?? Enumerable.Empty<AvailabilityDto>();
+            return Ok(new { message, count = availabilityDtos.Count(), availabilities = availabilityDtos });
+        }
 
-            }
-            _logger.LogError("[AvailabilityController] Failed to delete availability {AvailabilityId:0000}", id);
-            return BadRequest("Failed to delete availability");
-        }
-        catch (DbUpdateException)
-        {
-            _logger.LogError("[AvailabilityController] Failed to delete availability {AvailabilityId:0000}", id);
-            return BadRequest("Failed to delete availability");
-        }
+        return BadRequest(new { message });
     }
 
 

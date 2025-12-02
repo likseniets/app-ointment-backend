@@ -105,6 +105,10 @@ builder.Services.AddScoped<IChangeRequestRepository, ChangeRequestRepository>();
 
 // Services
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
+builder.Services.AddScoped<IChangeRequestService, ChangeRequestService>();
 
 var loggerConfiguration = new LoggerConfiguration()
     .MinimumLevel.Information() // levels: Trace < Information < Warning < Error < Fatal

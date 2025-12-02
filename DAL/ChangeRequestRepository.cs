@@ -3,6 +3,8 @@ using app_ointment_backend.Models;
 
 namespace app_ointment_backend.DAL;
 
+//handle database operations for change requests
+
 public class ChangeRequestRepository : IChangeRequestRepository
 {
     private readonly UserDbContext _db;

@@ -3,6 +3,8 @@ using app_ointment_backend.Models;
 
 namespace app_ointment_backend.DAL;
 
+//handle database operations for users
+
 public class UserRepository : IUserRepository
 {
     private readonly UserDbContext _context;

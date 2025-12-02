@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace app_ointment_backend.Models;
 
-
+//Data Transfer Objects for Appointment-related operations
 
 public class AppointmentDto
 {
@@ -15,6 +15,7 @@ public class AppointmentDto
     public string ClientAddress { get; set; } = string.Empty;
     public string Task { get; set; } = string.Empty;
 
+    //convert Appointment model to AppointmentDto
     public static AppointmentDto FromAppointment(Appointment appointment)
     {
         return new AppointmentDto
@@ -43,6 +44,16 @@ public class CreateAppointmentDto
     public AppointmentTask Task { get; set; }
 }
 
+public class UpdateAppointmentDto
+{
+    [Required]
+    [CustomValidation(typeof(Appointment), nameof(Appointment.ValidateFutureDate))]
+    public DateTime Date { get; set; }
+
+    [Required]
+    public AppointmentTask Task { get; set; }
+}
+
 public enum AppointmentTask
 {
     AssistanceWithDailyLiving,
@@ -59,6 +70,7 @@ public enum AppointmentTask
 
 public static class AppointmentTaskExtensions
 {
+    //convert AppointmentTask enum to a user-friendly display string
     public static string ToDisplayString(this AppointmentTask task)
     {
         return task switch

@@ -11,6 +11,7 @@ public class GetCaregiverWithAvailability
     public string? ImageUrl { get; set; }
     public virtual List<Availability>? Availability { get; set; }
 
+    //convert Caregiver model to GetCaregiverWithAvailability DTO
     public static GetCaregiverWithAvailability FromCaregiver(Caregiver caregiver)
     {
         return new GetCaregiverWithAvailability

@@ -2,6 +2,8 @@ using app_ointment_backend.Models;
 
 namespace app_ointment_backend.DAL;
 
+//interface to define what is in the repository
+
 public interface IUserRepository
 {
     Task<IEnumerable<User>?> GetAll();

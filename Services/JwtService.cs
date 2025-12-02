@@ -6,6 +6,8 @@ using app_ointment_backend.Models;
 
 namespace app_ointment_backend.Services;
 
+//interface to define what is in the JWT service
+
 public interface IJwtService
 {
     string GenerateToken(User user);
@@ -20,6 +22,7 @@ public class JwtService : IJwtService
         _configuration = configuration;
     }
 
+    // Generate a JWT token for the given user with claims
     public string GenerateToken(User user)
     {
         var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? _configuration["Jwt:Key"];
@@ -39,7 +42,7 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim("Role", ((int)user.Role).ToString())
         };
-
+        
         var token = new JwtSecurityToken(
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],

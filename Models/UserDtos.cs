@@ -12,6 +12,7 @@ public class UserDto
     public string Email { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
 
+    //convert User model to UserDto
     public static UserDto FromUser(User user)
     {
         return new UserDto

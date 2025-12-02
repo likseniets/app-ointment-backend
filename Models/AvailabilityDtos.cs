@@ -11,6 +11,7 @@ public class AvailabilityDto
     public int CaregiverId { get; set; }
     public string CaregiverName { get; set; } = string.Empty;
 
+    //convert Availability model to AvailabilityDto
     public static AvailabilityDto FromAvailability(Availability availability)
     {
         return new AvailabilityDto
@@ -45,4 +46,19 @@ public class CreateAvailabilityDto
     [Required]
     [Range(15, 480, ErrorMessage = "Slot length must be between 15 minutes and 8 hours (480 minutes)")]
     public int SlotLengthMinutes { get; set; } = 60; // Default to 60 minutes
+}
+
+public class UpdateAvailabilityDto
+{
+    [Required]
+    [DataType(DataType.Date)]
+    public DateTime Date { get; set; }
+
+    [Required]
+    [RegularExpression(@"^([01]?[0-9]|2[0-3]):[0-5][0-9]$", ErrorMessage = "Start time must be in format HH:mm")]
+    public string StartTime { get; set; } = string.Empty;
+
+    [Required]
+    [RegularExpression(@"^([01]?[0-9]|2[0-3]):[0-5][0-9]$", ErrorMessage = "End time must be in format HH:mm")]
+    public string EndTime { get; set; } = string.Empty;
 }

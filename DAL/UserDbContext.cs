@@ -5,17 +5,20 @@ namespace app_ointment_backend.DAL;
 
 public class UserDbContext : DbContext
 {
-	public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
-	{
-		//Database.EnsureCreated(); //Removed because migrations
-	}
-
 	public DbSet<User> Users { get; set; }
 	public DbSet<Client> Clients { get; set; }
 	public DbSet<Caregiver> Caregivers { get; set; }
 	public DbSet<Appointment> Appointments { get; set; }
 	public DbSet<Availability> Availabilities { get; set; }
 	public DbSet<AppointmentChangeRequest> AppointmentChangeRequests { get; set; }
+
+	public UserDbContext()
+	{
+	}
+
+	public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
+	{
+	}
 
 	protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 	{

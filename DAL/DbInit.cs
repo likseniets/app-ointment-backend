@@ -4,6 +4,8 @@ using BCrypt.Net;
 
 namespace app_ointment_backend.DAL;
 
+//handle database operations for database initialization
+
 public static class DBInit
 {
     public static void Seed(IApplicationBuilder app)

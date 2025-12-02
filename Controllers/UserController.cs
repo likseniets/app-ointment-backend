@@ -2,27 +2,29 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using app_ointment_backend.Models;
-using app_ointment_backend.DAL;
-using BCrypt.Net;
+using app_ointment_backend.Services;
 
 namespace app_ointment_backend.Controllers;
 
-// UserController setup based on course demos for ItemController
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : Controller
 {
-    private readonly IUserRepository _userRepository;
+    private readonly IUserService _userService;
     private readonly ILogger<UserController> _logger;
 
-    public UserController(IUserRepository userRepository, ILogger<UserController> logger)
+    public UserController(IUserService userService, ILogger<UserController> logger)
     {
-        _userRepository = userRepository;
+        _userService = userService;
         _logger = logger;
     }
 
+    // HttpGet for getting the current user based on JWT claims
     [HttpGet]
     [Authorize]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetCurrentUser()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -32,7 +34,7 @@ public class UserController : Controller
             return Unauthorized("Invalid token");
         }
 
-        var user = await _userRepository.GetUserById(userId);
+        var user = await _userService.GetUserById(userId);
         if (user == null)
         {
             _logger.LogError("[UserController] User not found for UserId {UserId}", userId);
@@ -42,25 +44,31 @@ public class UserController : Controller
         return Ok(UserDto.FromUser(user));
     }
 
+    // HttpGet for getting all users
     [HttpGet("all")]
     [Authorize]
+    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetUsers()
     {
-        var users = await _userRepository.GetAll();
+        var users = await _userService.GetAllUsers();
         if (users == null)
         {
-            _logger.LogError("[UserController] User list not found while executing _userRepository.GetAll()");
+            _logger.LogError("[UserController] User list not found");
             return NotFound("User list not found");
         }
         var userDtos = users.Select(UserDto.FromUser);
         return Ok(userDtos);
     }
 
+    // HttpGet for getting user details by user ID
     [HttpGet("{userId:int}")]
     [Authorize]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> userDetails(int userId)
     {
-        var user = await _userRepository.GetUserById(userId);
+        var user = await _userService.GetUserById(userId);
         if (user == null)
         {
             _logger.LogError("[UserController] User not found for the UserId {UserId:0000}", userId);
@@ -69,35 +77,46 @@ public class UserController : Controller
         return Ok(UserDto.FromUser(user));
     }
 
+    // HttpGet for getting all caregivers with their availability
     [HttpGet("caregivers")]
     [Authorize]
+    [ProducesResponseType(typeof(IEnumerable<GetCaregiverWithAvailability>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetCaregivers()
     {
-        var caregivers = await _userRepository.GetCaregivers();
+        var caregivers = await _userService.GetCaregivers();
         if (caregivers == null)
         {
-            _logger.LogError("[UserController] Caregiver list not found while executing _userRepository.GetCaregivers()");
+            _logger.LogError("[UserController] Caregiver list not found");
             return NotFound("Caregiver list not found");
         }
-        var caregiverDtos = caregivers.Select(GetCaregiverWithAvailability.FromCaregiver);
+        var caregiverDtos = caregivers
+            .OfType<Caregiver>()
+            .Select(GetCaregiverWithAvailability.FromCaregiver);
         return Ok(caregiverDtos);
     }
 
+    // HttpGet for getting all clients
     [HttpGet("clients")]
     [Authorize]
+    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetClients()
     {
-        var clients = await _userRepository.GetClients();
+        var clients = await _userService.GetClients();
         if (clients == null)
         {
-            _logger.LogError("[UserController] Client list not found while executing _userRepository.GetClients()");
+            _logger.LogError("[UserController] Client list not found");
             return NotFound("Client list not found");
         }
         var clientDtos = clients.Select(UserDto.FromUser);
         return Ok(clientDtos);
     }
 
+    // HttpPost for registering a new client
     [HttpPost("create/client")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RegisterClient([FromBody] CreateUserDto newUserDto)
     {
         if (!ModelState.IsValid)
@@ -105,36 +124,22 @@ public class UserController : Controller
             return BadRequest(ModelState);
         }
 
-        // Check if email already exists
-        var existingUser = await _userRepository.GetUserByEmail(newUserDto.Email);
-        if (existingUser != null)
+        var result = await _userService.CreateClient(newUserDto);
+        
+        if (!result.Success)
         {
-            _logger.LogWarning("[UserController] Email {Email} already exists", newUserDto.Email);
-            return BadRequest("Email already registered");
+            return BadRequest(result.Message);
         }
 
-        // Hash the password
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(newUserDto.Password);
-
-        // Create client
-        var newUser = new Client
-        {
-            Name = newUserDto.Name,
-            Adress = newUserDto.Adress,
-            Phone = newUserDto.Phone,
-            Email = newUserDto.Email,
-            PasswordHash = passwordHash,
-            ImageUrl = newUserDto.ImageUrl ?? string.Empty
-        };
-
-        await _userRepository.CreateUser(newUser);
-        _logger.LogInformation("[UserController] Client {Email} registered successfully", newUser.Email);
-
-        return CreatedAtAction(nameof(userDetails), new { userId = newUser.UserId }, UserDto.FromUser(newUser));
+        return CreatedAtAction(nameof(userDetails), new { userId = result.User!.UserId }, UserDto.FromUser(result.User));
     }
 
+    // HttpPost for creating a new caregiver
     [HttpPost("create/caregiver")]
     [Authorize]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateCaregiver([FromBody] CreateUserDto newUserDto)
     {
         if (!ModelState.IsValid)
@@ -149,36 +154,22 @@ public class UserController : Controller
             return Forbid();
         }
 
-        // Check if email already exists
-        var existingUser = await _userRepository.GetUserByEmail(newUserDto.Email);
-        if (existingUser != null)
+        var result = await _userService.CreateCaregiver(newUserDto);
+        
+        if (!result.Success)
         {
-            _logger.LogWarning("[UserController] Email {Email} already exists", newUserDto.Email);
-            return BadRequest("Email already registered");
+            return BadRequest(result.Message);
         }
 
-        // Hash the password
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(newUserDto.Password);
-
-        // Create caregiver
-        var newUser = new Caregiver
-        {
-            Name = newUserDto.Name,
-            Adress = newUserDto.Adress,
-            Phone = newUserDto.Phone,
-            Email = newUserDto.Email,
-            PasswordHash = passwordHash,
-            ImageUrl = newUserDto.ImageUrl ?? string.Empty
-        };
-
-        await _userRepository.CreateUser(newUser);
-        _logger.LogInformation("[UserController] Caregiver {Email} created successfully by admin", newUser.Email);
-
-        return CreatedAtAction(nameof(userDetails), new { userId = newUser.UserId }, UserDto.FromUser(newUser));
+        return CreatedAtAction(nameof(userDetails), new { userId = result.User!.UserId }, UserDto.FromUser(result.User));
     }
 
+    // HttpPost for creating a new admin
     [HttpPost("create/admin")]
     [Authorize]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateAdmin([FromBody] CreateUserDto newUserDto)
     {
         if (!ModelState.IsValid)
@@ -193,37 +184,24 @@ public class UserController : Controller
             return Forbid();
         }
 
-        // Check if email already exists
-        var existingUser = await _userRepository.GetUserByEmail(newUserDto.Email);
-        if (existingUser != null)
+        var result = await _userService.CreateAdmin(newUserDto);
+        
+        if (!result.Success)
         {
-            _logger.LogWarning("[UserController] Email {Email} already exists", newUserDto.Email);
-            return BadRequest("Email already registered");
+            return BadRequest(result.Message);
         }
 
-        // Hash the password
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(newUserDto.Password);
-
-        // Create admin user (using Client as base since we don't have Admin-specific class)
-        var newUser = new Client
-        {
-            Name = newUserDto.Name,
-            Adress = newUserDto.Adress,
-            Phone = newUserDto.Phone,
-            Email = newUserDto.Email,
-            PasswordHash = passwordHash,
-            ImageUrl = newUserDto.ImageUrl ?? string.Empty,
-            Role = UserRole.Admin
-        };
-
-        await _userRepository.CreateUser(newUser);
-        _logger.LogInformation("[UserController] Admin {Email} created successfully", newUser.Email);
-
-        return CreatedAtAction(nameof(userDetails), new { userId = newUser.UserId }, UserDto.FromUser(newUser));
+        return CreatedAtAction(nameof(userDetails), new { userId = result.User!.UserId }, UserDto.FromUser(result.User));
     }
 
+    // HttpPut for updating a user
     [HttpPut("update/{userId:int}")]
     [Authorize]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateUser(int userId, [FromBody] UpdateUserDto updateDto)
     {
         if (!ModelState.IsValid)
@@ -252,39 +230,23 @@ public class UserController : Controller
             return Forbid();
         }
 
-        var user = await _userRepository.GetUserById(userId);
-        if (user == null)
+        var result = await _userService.UpdateUser(userId, updateDto);
+        
+        if (!result.Success)
         {
-            _logger.LogError("[UserController] User not found for UserId {UserId}", userId);
-            return NotFound("User not found");
+            return BadRequest(result.Message);
         }
 
-        // Check if email is being changed to an existing email
-        if (user.Email != updateDto.Email)
-        {
-            var existingUser = await _userRepository.GetUserByEmail(updateDto.Email);
-            if (existingUser != null)
-            {
-                _logger.LogWarning("[UserController] Email {Email} already exists", updateDto.Email);
-                return BadRequest("Email already registered");
-            }
-        }
-
-        // Update user properties
-        user.Name = updateDto.Name;
-        user.Adress = updateDto.Adress;
-        user.Phone = updateDto.Phone;
-        user.Email = updateDto.Email;
-        user.ImageUrl = updateDto.ImageUrl ?? user.ImageUrl;
-
-        await _userRepository.UpdateUser(user);
-        _logger.LogInformation("[UserController] User {UserId} updated successfully", userId);
-
-        return Ok(UserDto.FromUser(user));
+        var user = await _userService.GetUserById(userId);
+        return Ok(UserDto.FromUser(user!));
     }
 
+    // HttpPost for changing password
     [HttpPost("change-password")]
     [Authorize]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
     {
         if (!ModelState.IsValid)
@@ -299,32 +261,24 @@ public class UserController : Controller
             return Unauthorized("Invalid token");
         }
 
-        var user = await _userRepository.GetUserById(userId);
-        if (user == null)
+        var result = await _userService.ChangePassword(userId, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
+        
+        if (!result.Success)
         {
-            _logger.LogError("[UserController] User not found for UserId {UserId}", userId);
-            return NotFound("User not found");
+            return BadRequest(result.Message);
         }
 
-        // Verify current password
-        bool isCurrentPasswordValid = BCrypt.Net.BCrypt.Verify(changePasswordDto.CurrentPassword, user.PasswordHash);
-        if (!isCurrentPasswordValid)
-        {
-            _logger.LogWarning("[UserController] Invalid current password for user {UserId}", userId);
-            return BadRequest("Current password is incorrect");
-        }
-
-        // Update to new password
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
-
-        await _userRepository.UpdateUser(user);
-        _logger.LogInformation("[UserController] Password changed successfully for user {UserId}", userId);
-
-        return Ok(new { message = "Password changed successfully" });
+        return Ok(new { message = result.Message });
     }
 
+    // HttpDelete for deleting a user
     [HttpDelete("delete/{userId:int}")]
     [Authorize]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteUser(int userId)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -348,28 +302,13 @@ public class UserController : Controller
             return Forbid();
         }
 
-        var user = await _userRepository.GetUserById(userId);
-        if (user == null)
+        var result = await _userService.DeleteUser(userId);
+        
+        if (!result.Success)
         {
-            _logger.LogError("[UserController] User not found for UserId {UserId}", userId);
-            return NotFound("User not found");
+            return BadRequest(result.Message);
         }
 
-        try
-        {
-            bool success = await _userRepository.DeleteUser(userId);
-            if (success)
-            {
-                _logger.LogInformation("[UserController] User {UserId} deleted successfully", userId);
-                return Ok(new { message = "User deleted successfully" });
-            }
-
-            return BadRequest("Failed to delete user");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("[UserController] Failed to delete user {UserId}: {Error}", userId, ex.Message);
-            return BadRequest("Unable to delete user. Please try again.");
-        }
+        return Ok(new { message = result.Message });
     }
 }
