@@ -42,7 +42,9 @@ public class AppointmentServiceTests
         );
     }
 
-    // Test 1: CREATE - Positive Test
+    #region CREATE Tests
+
+    // Test 1: CREATE Appointment - Positive Test
     [Fact]
     public async Task CreateAppointment_WithValidData_ShouldReturnSuccess()
     {
@@ -88,7 +90,7 @@ public class AppointmentServiceTests
         _mockAvailabilityRepo.Verify(x => x.DeleteAvailability(1), Times.Once);
     }
 
-    // Test 2: CREATE - Negative Test (Availability Not Found)
+    // Test 2: CREATE Appointment - Negative Test (Availability Not Found)
     [Fact]
     public async Task CreateAppointment_WithInvalidAvailability_ShouldReturnFailure()
     {
@@ -113,7 +115,7 @@ public class AppointmentServiceTests
         _mockAppointmentRepo.Verify(x => x.CreateAppointment(It.IsAny<Appointment>()), Times.Never);
     }
 
-    // Test 3: CREATE - Negative Test (Client Not Found)
+    // Test 3: CREATE Appointment - Negative Test (Client Not Found)
     [Fact]
     public async Task CreateAppointment_WithInvalidClient_ShouldReturnFailure()
     {
@@ -150,7 +152,7 @@ public class AppointmentServiceTests
         result.Appointment.Should().BeNull();
     }
 
-    // Test 4: CREATE - Negative Test (Slot Already Booked)
+    // Test 4: CREATE Appointment - Negative Test (Slot Already Booked)
     [Fact]
     public async Task CreateAppointment_WithAlreadyBookedSlot_ShouldReturnFailure()
     {
@@ -200,7 +202,11 @@ public class AppointmentServiceTests
         result.Appointment.Should().BeNull();
     }
 
-    // Test 5: READ - Get All Appointments (Positive)
+    #endregion
+
+    #region READ Tests
+
+    // Test 5: READ Appointment - Get All Appointments (Positive)
     [Fact]
     public async Task GetAllAppointments_ShouldReturnAllAppointments()
     {
@@ -223,7 +229,7 @@ public class AppointmentServiceTests
         _mockAppointmentRepo.Verify(x => x.GetAll(), Times.Once);
     }
 
-    // Test 6: READ - Get Appointment by ID (Positive)
+    // Test 6: READ Appointment - Get Appointment by ID (Positive)
     [Fact]
     public async Task GetAppointmentById_WithValidId_ShouldReturnAppointment()
     {
@@ -249,7 +255,11 @@ public class AppointmentServiceTests
         result.Task.Should().Be(AppointmentTask.MealPreparation);
     }
 
-    // Test 7: UPDATE - Positive Test
+    #endregion
+
+    #region UPDATE Tests
+
+    // Test 7: UPDATE Appointment - Positive Test
     [Fact]
     public async Task UpdateAppointment_WithValidData_ShouldReturnSuccess()
     {
@@ -287,7 +297,7 @@ public class AppointmentServiceTests
         )), Times.Once);
     }
 
-    // Test 8: UPDATE - Negative Test (Appointment Not Found)
+    // Test 8: UPDATE Appointment - Negative Test (Appointment Not Found)
     [Fact]
     public async Task UpdateAppointment_WithInvalidId_ShouldReturnFailure()
     {
@@ -310,7 +320,7 @@ public class AppointmentServiceTests
         _mockAppointmentRepo.Verify(x => x.UpdateAppointment(It.IsAny<Appointment>()), Times.Never);
     }
 
-    // Test 9: UPDATE - Negative Test (Past Date)
+    // Test 9: UPDATE Appointment - Negative Test (Past Date)
     [Fact]
     public async Task UpdateAppointment_WithPastDate_ShouldReturnFailure()
     {
@@ -342,7 +352,11 @@ public class AppointmentServiceTests
         _mockAppointmentRepo.Verify(x => x.UpdateAppointment(It.IsAny<Appointment>()), Times.Never);
     }
 
-    // Test 10: DELETE - Positive Test
+    #endregion
+
+    #region DELETE Tests
+
+    // Test 10: DELETE Appointment - Positive Test
     [Fact]
     public async Task DeleteAppointment_WithValidId_ShouldReturnSuccess()
     {
@@ -370,7 +384,7 @@ public class AppointmentServiceTests
         _mockAppointmentRepo.Verify(x => x.DeleteAppointment(1), Times.Once);
     }
 
-    // Test 11: DELETE - Negative Test (Appointment Not Found)
+    // Test 11: DELETE Appointment - Negative Test (Appointment Not Found)
     [Fact]
     public async Task DeleteAppointment_WithInvalidId_ShouldReturnFailure()
     {
@@ -386,6 +400,10 @@ public class AppointmentServiceTests
         result.Message.Should().Be("Appointment not found");
         _mockAppointmentRepo.Verify(x => x.DeleteAppointment(It.IsAny<int>()), Times.Never);
     }
+
+    #endregion
+
+    #region VALIDATION Tests
 
     // Test 12: IsAppointmentSlotAvailable - Check Availability
     [Fact]
@@ -426,4 +444,6 @@ public class AppointmentServiceTests
         // Assert
         result.Should().BeFalse();
     }
+
+    #endregion
 }
